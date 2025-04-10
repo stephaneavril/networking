@@ -47,9 +47,9 @@ def subir_evidencia():
 @app.route('/adivina')
 def adivina():
     conn = get_db_connection()
-    participantes = conn.execute("SELECT * FROM adivina_participantes").fetchall()
+    data = conn.execute("SELECT * FROM adivina_participantes").fetchall()
     conn.close()
-    return render_template('adivina.html', participantes=participantes)
+    return render_template('adivina.html', participantes=data)
 
 if __name__ == '__main__':
     app.run(debug=True)
