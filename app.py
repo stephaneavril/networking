@@ -13,7 +13,10 @@ def get_db_connection():
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    conn = get_db_connection()
+    retos = conn.execute("SELECT * FROM retos WHERE activo = 1").fetchall()
+    conn.close()
+    return render_template('index.html', retos=retos)
 
 if __name__ == '__main__':
     app.run(debug=True)
