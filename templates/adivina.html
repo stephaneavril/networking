@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Reto Adivina Quién</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #0c0e2c;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .tarjeta {
+      background-color: #1f2140;
+      padding: 20px;
+      margin: 30px auto;
+      border-radius: 12px;
+      max-width: 500px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+
+    input[type="text"] {
+      padding: 10px;
+      font-size: 16px;
+      width: 80%;
+      margin-top: 10px;
+      border-radius: 6px;
+      border: none;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin-top: 15px;
+      font-size: 16px;
+      border: none;
+      background-color: #ec1c24;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    #resultado {
+      margin-top: 20px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 Reto: Adivina Quién</h1>
+
+  <div class="tarjeta">
+    <div id="contenido"></div>
+    <input type="text" id="respuesta" placeholder="¿Quién crees que es? Ej: Ana Torres" />
+    <br>
+    <button onclick="verificar()">Responder</button>
+    <div id="resultado"></div>
+  </div>
+
+  <script>
+    const participantes = {{ participantes|tojson }};
+    let indices_restantes = participantes.map((_, i) => i);
+    let actual;
+
+    function mostrarFrase() {
+      if (indices_restantes.length === 0) {
+        document.getElementById("contenido").innerHTML = "🎉 ¡Completaste el reto!";
+        document.getElementById("respuesta").style.display = "none";
+        document.querySelector("button").style.display = "none";
+        document.getElementById("resultado").innerText = "";
+        return;
+      }
+
+      const idx = Math.floor(Math.random() * indices_restantes.length);
+      const i = indices_restantes[idx];
+      actual = participantes[i];
+      indices_restantes.splice(idx, 1); // lo eliminamos para no repetir
+
+      const opciones = [
+        `<strong>Superpoder:</strong> ${actual.superpoder}`,
+        `<strong>Pasión:</strong> ${actual.pasion}`,
+        `<strong>Dato curioso:</strong> ${actual.dato_curioso}`,
+        `<strong>No soporta:</strong> ${actual.no_soporto}`
+      ];
+
+      const seleccion = opciones[Math.floor(Math.random() * opciones.length)];
+      document.getElementById("contenido").innerHTML = seleccion;
+      document.getElementById("respuesta").value = "";
+      document.getElementById("resultado").innerText = "";
+    }
+
+    function verificar() {
+      const entrada = document.getElementById("respuesta").value.trim().toLowerCase();
+      const correcto = actual.nombre_completo.trim().toLowerCase();
+      if (entrada === correcto) {
+        document.getElementById("resultado").innerText = "✅ ¡Correcto!";
+        setTimeout(mostrarFrase, 1500);
+      } else {
+        document.getElementById("resultado").innerText = "❌ Intenta de nuevo";
+      }
+    }
+
+    mostrarFrase();
+  </script>
+</body>
+</html>
