@@ -2,17 +2,71 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Reto Grupal</title>
+  <title>Reto Grupal Random</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: url('/static/images/fondo_reto_grupal.jpg') no-repeat center center fixed;
+      background-size: cover;
+      color: white;
+      text-align: center;
+    }
+
+    .contenido {
+      background-color: rgba(0, 0, 0, 0.7); /* oscurece para mejorar legibilidad */
+      max-width: 600px;
+      margin: 80px auto;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+    }
+
+    input[type="file"],
+    textarea,
+    button {
+      width: 100%;
+      margin: 15px 0;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+    }
+
+    button {
+      background-color: #ec1c24;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    h1 {
+      color: gold;
+      text-shadow: 2px 2px 4px #000;
+    }
+
+    label {
+      font-weight: bold;
+      color: #fff;
+      display: block;
+      margin-top: 20px;
+      text-align: left;
+    }
+  </style>
 </head>
 <body>
-  <h1>🎯 Tu reto es jugar a: <strong>{{ reto }}</strong></h1>
-  <form action="/guardar_reto_grupal" method="POST" enctype="multipart/form-data">
-    <input type="hidden" name="reto" value="{{ reto }}">
-    <p>🧑‍🤝‍🧑 Nombres de los participantes:</p>
-    <textarea name="nombres" rows="3" cols="50" required></textarea><br><br>
-    <p>📸 Sube una foto del equipo:</p>
-    <input type="file" name="foto" required><br><br>
-    <button type="submit">Enviar evidencia</button>
-  </form>
+  <div class="contenido">
+    <h1>🎯 Tu reto es jugar a: {{ reto }}</h1>
+    <form method="POST" action="/guardar_reto_grupal" enctype="multipart/form-data">
+      <input type="hidden" name="reto" value="{{ reto }}">
+      
+      <label>👥 Nombres de los participantes:</label>
+      <textarea name="nombres" required rows="3"></textarea>
+      
+      <label>📸 Sube una foto del equipo:</label>
+      <input type="file" name="foto" accept="image/*" required>
+
+      <button type="submit">Enviar evidencia</button>
+    </form>
+  </div>
 </body>
 </html>

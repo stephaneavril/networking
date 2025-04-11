@@ -14,6 +14,10 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
+@app.before_request
+def make_session_permanent():
+    session.permanent = True
+
 # -------------------- LOGIN --------------------
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -35,10 +39,6 @@ def login():
         return redirect('/')
     return render_template('login.html')
 
-@app.before_request
-def make_session_permanent():
-    session.permanent = True
-
 # -------------------- HOME --------------------
 
 @app.route('/')
@@ -46,7 +46,7 @@ def index():
     if 'jugador' not in session:
         return redirect('/login')
     conn = get_db_connection()
-    retos = conn.execute("SELECT * FROM retos").fetchall()
+    retos = conn.execute("SELECT * FROM retos WHERE activo = 1").fetchall()  # ✅ Correcto
     conn.close()
     return render_template('index.html', retos=retos)
 
@@ -117,7 +117,7 @@ def ranking_adivina():
     conn.close()
     return render_template('ranking_adivina.html', resultados=resultados, mi_resultado=mi_resultado)
 
-# -------------------- EVIDENCIA INDIVIDUAL --------------------
+# -------------------- SUBIR EVIDENCIA INDIVIDUAL --------------------
 
 @app.route('/subir_evidencia', methods=['POST'])
 def subir_evidencia():
@@ -130,6 +130,7 @@ def subir_evidencia():
         return "❌ Faltan datos", 400
     nombre_archivo = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{archivo.filename}"
     ruta_archivo = os.path.join(app.config['UPLOAD_FOLDER'], nombre_archivo)
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     archivo.save(ruta_archivo)
     conn = get_db_connection()
     conn.execute(
@@ -160,6 +161,7 @@ def guardar_reto_grupal():
         return "❌ Faltan datos", 400
     nombre_archivo = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{archivo.filename}"
     ruta_archivo = os.path.join(app.config['UPLOAD_FOLDER_GRUPAL'], nombre_archivo)
+    os.makedirs(app.config['UPLOAD_FOLDER_GRUPAL'], exist_ok=True)
     archivo.save(ruta_archivo)
     conn = get_db_connection()
     conn.execute("""
@@ -170,14 +172,25 @@ def guardar_reto_grupal():
     conn.close()
     return "✅ Reto grupal registrado con éxito"
 
-# -------------------- SUITE PRIVADA --------------------
+# -------------------- ADMIN PANEL COMPLETO --------------------
 
-@app.route('/suite_reto_grupal')
-def suite_grupal():
+@app.route('/admin_panel', methods=['GET', 'POST'])
+def admin_panel():
     conn = get_db_connection()
-    fotos = conn.execute("SELECT * FROM participaciones_grupales ORDER BY timestamp DESC").fetchall()
+
+    # Activación/desactivación
+    if request.method == 'POST':
+        reto_id = request.form.get('reto_id')
+        nuevo_estado = request.form.get('activo')
+        conn.execute("UPDATE retos SET activo = ? WHERE id = ?", (nuevo_estado, reto_id))
+        conn.commit()
+
+    # Datos para el panel
+    retos = conn.execute("SELECT * FROM retos").fetchall()
+    resultados = conn.execute("SELECT * FROM adivina_resultados ORDER BY puntos_extra DESC").fetchall()
+    participaciones = conn.execute("SELECT * FROM participaciones_grupales ORDER BY timestamp DESC").fetchall()
     conn.close()
-    return render_template("suite_grupal.html", fotos=fotos)
+    return render_template("admin_panel.html", retos=retos, resultados=resultados, participaciones=participaciones)
 
 @app.route('/calificar/<int:id>', methods=['POST'])
 def calificar(id):
@@ -188,38 +201,11 @@ def calificar(id):
                  (calificacion, comentario, id))
     conn.commit()
     conn.close()
-    return redirect('/suite_reto_grupal')
+    return redirect('/admin_panel')
 
-# -------------------- ADMINISTRACIÓN DE RETOS --------------------
-
-@app.route('/admin_retros', methods=['GET', 'POST'])
-def admin_retros():
-    if request.method == 'POST':
-        reto_id = request.form.get('reto_id')
-        nuevo_estado = request.form.get('activo')
-        conn = get_db_connection()
-        conn.execute("UPDATE retos SET activo = ? WHERE id = ?", (nuevo_estado, reto_id))
-        conn.commit()
-        conn.close()
-        return redirect('/admin_retros')
-
-    conn = get_db_connection()
-    retos = conn.execute("SELECT * FROM retos").fetchall()
-    conn.close()
-    return render_template("admin_retros.html", retos=retos)
-
-# -------------------- INICIAR SERVIDOR --------------------
+# -------------------- RUN --------------------
 
 if __name__ == '__main__':
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     os.makedirs(app.config['UPLOAD_FOLDER_GRUPAL'], exist_ok=True)
     app.run(debug=True)
-
-@app.route('/admin_panel')
-def admin_panel():
-    conn = get_db_connection()
-    retos = conn.execute("SELECT * FROM retos").fetchall()
-    resultados = conn.execute("SELECT * FROM adivina_resultados ORDER BY puntos_extra DESC").fetchall()
-    participaciones = conn.execute("SELECT * FROM participaciones_grupales ORDER BY timestamp DESC").fetchall()
-    conn.close()
-    return render_template("admin_panel.html", retos=retos, resultados=resultados, participaciones=participaciones)
