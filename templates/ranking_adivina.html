@@ -53,12 +53,12 @@
     </thead>
     <tbody>
       {% for r in resultados %}
-      <tr {% if r['nombre'] == jugador %}class="highlight"{% endif %}>
+      <tr {% if r['nombre_jugador'] == mi_resultado['nombre_jugador'] %}class="highlight"{% endif %}>
         <td>{{ loop.index }}</td>
-        <td>{{ r['nombre'] }}</td>
+        <td>{{ r['nombre_jugador'] }}</td>
         <td>{{ r['aciertos'] }}</td>
-        <td>{{ r['bonus'] }}</td>
-        <td>{{ r['puntos'] }}</td>
+        <td>{{ r['puntos_extra'] - (r['aciertos'] * 3) }}</td>
+        <td>{{ r['puntos_extra'] }}</td>
       </tr>
       {% endfor %}
     </tbody>
