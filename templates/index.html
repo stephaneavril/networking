@@ -78,18 +78,17 @@
 
     <div class="grid">
       {% for reto in retos %}
-  {% if reto.nombre == 'Adivina Quién' %}
-    <div class="card" onclick="location.href='/adivina'">
-  {% elif reto.nombre == 'Reto Grupal Random' %}
-    <div class="card" onclick="location.href='/reto_grupal'">
-  {% else %}
-    <div class="card">
-  {% endif %}
-      <div class="badge">+{{ reto.puntos }}</div>
-      <h3>{{ reto.nombre }}</h3>
-    </div>
-{% endfor %}
-
+        {% if reto.nombre == 'Adivina Quién' %}
+          <div class="card" onclick="location.href='/adivina'">
+        {% elif reto.nombre == 'Reto Grupal Random' %}
+          <div class="card" onclick="location.href='/reto_grupal'">
+        {% else %}
+          <div class="card" onclick="alert('Este reto aún no está implementado')">
+        {% endif %}
+            <div class="badge">+{{ reto.puntos }}</div>
+            <h3>{{ reto.nombre }}</h3>
+          </div>
+      {% endfor %}
 
       <div class="card" onclick="location.href='{{ url_for('ranking_adivina') }}'">
         <div class="badge">👑</div>

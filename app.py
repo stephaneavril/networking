@@ -117,7 +117,7 @@ def ranking_adivina():
     conn.close()
     return render_template('ranking_adivina.html', resultados=resultados, mi_resultado=mi_resultado)
 
-# -------------------- EVIDENCIA --------------------
+# -------------------- EVIDENCIA INDIVIDUAL --------------------
 
 @app.route('/subir_evidencia', methods=['POST'])
 def subir_evidencia():
@@ -140,7 +140,7 @@ def subir_evidencia():
     conn.close()
     return "✅ Evidencia enviada con éxito"
 
-# -------------------- RETO GRUPAL --------------------
+# -------------------- RETO GRUPAL RANDOM --------------------
 
 @app.route('/reto_grupal')
 def reto_grupal():
@@ -190,7 +190,9 @@ def calificar(id):
     conn.close()
     return redirect('/suite_reto_grupal')
 
-# --------------------
+# -------------------- INICIAR SERVIDOR --------------------
 
 if __name__ == '__main__':
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    os.makedirs(app.config['UPLOAD_FOLDER_GRUPAL'], exist_ok=True)
     app.run(debug=True)
