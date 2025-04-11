@@ -77,12 +77,12 @@
         fetch('/adivina_finalizado', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ aciertos })
+          body: JSON.stringify({ jugador: "{{ session['jugador'] }}", aciertos })
         })
         .then(res => res.json())
         .then(data => {
           alert(data.message || data.error);
-          window.location.href = "/adivina_ranking";
+          window.location.href = "/ranking_adivina";
         });
         return;
       }

@@ -26,6 +26,15 @@ CREATE TABLE IF NOT EXISTS evidencias (
 )
 ''')
 
+# Tabla de jugadores
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS jugadores (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL,
+    correo TEXT NOT NULL UNIQUE
+)
+''')
+
 # Tabla de participantes de "Adivina Quién"
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS adivina_participantes (

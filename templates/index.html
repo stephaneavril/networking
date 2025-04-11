@@ -78,13 +78,13 @@
 
     <div class="grid">
       {% for reto in retos %}
-        <div class="card" onclick="location.href='/adivina' if reto.nombre == 'Adivina Quién' else alert('Sube evidencia en otra vista')">
+        <div class="card" onclick="location.href='{{ url_for('adivina') if reto.nombre == 'Adivina Quién' else '#' }}'">
           <div class="badge">+{{ reto.puntos }}</div>
           <h3>{{ reto.nombre }}</h3>
         </div>
       {% endfor %}
 
-      <div class="card" onclick="location.href='/ranking_adivina'">
+      <div class="card" onclick="location.href='{{ url_for('ranking_adivina') }}'">
         <div class="badge">👑</div>
         <h3>Ranking Adivina Quién</h3>
       </div>
