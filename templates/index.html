@@ -78,7 +78,15 @@
 
     <div class="grid">
       {% for reto in retos %}
-  <div class="card" onclick="location.href='{{ '/adivina' if reto.nombre == 'Adivina Quién' else '/sube_evidencia?reto=' ~ reto.id }}'">
+  <div class="card"
+       onclick="location.href=
+         '{% if reto.nombre == 'Adivina Quién' %}
+            /adivina
+          {% elif reto.nombre == 'Reto Grupal Random' %}
+            /reto_grupal
+          {% else %}
+            #
+          {% endif %}'">
     <div class="badge">+{{ reto.puntos }}</div>
     <h3>{{ reto.nombre }}</h3>
   </div>

@@ -65,7 +65,7 @@ retos = [
     ('Furthest Distance', 1, 'individual', 1),
     ('Nerd Off', 1, 'individual', 1),
     ('Tongue Twister', 1, 'individual', 1),
-    ('Social', 2, 'equipo', 1),
+    ('Reto Grupal Random', 2, 'equipo', 1)
     ('Group Photo', 3, 'equipo', 1),
     ('Circle of Life', 2, 'equipo', 1),
     ('Vote on Media', 1, 'individual', 0),
@@ -87,6 +87,31 @@ cursor.executemany('''
     ) VALUES (?, ?, ?, ?, ?, ?, ?)
 ''', participantes)
 
+# Tabla de retos grupales posibles
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS retos_grupales (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL
+)
+""")
+
+# Tabla de registros de participación
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS participaciones_grupales (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    reto TEXT,
+    nombres_participantes TEXT,
+    archivo TEXT,
+    calificacion INTEGER DEFAULT 0,
+    comentario TEXT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+""")
+
+# Insertar retos si no existen
+retos = [('Jenga',), ('Conecta 4',), ('Corn Hole',)]
+cursor.executemany("INSERT INTO retos_grupales (nombre) VALUES (?)", retos)
+
 conn.commit()
 conn.close()
-print("✅ Base de datos creada con todas las tablas y datos de ejemplo.")
+print("✅ Base de datos actualizada para reto grupal.")
