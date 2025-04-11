@@ -41,6 +41,11 @@
     .card:hover {
       background: #2c2f55;
     }
+    .card.desactivado {
+      background: #2c2f55;
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
     .card h3 {
       margin: 10px 0 0;
       font-size: 1em;
@@ -69,37 +74,37 @@
 </head>
 <body>
 
-  <header>Networking Bingo</header>
+<header>Networking Bingo</header>
 
-  <div class="container">
-    <p style="text-align: center; font-size: 1.1em;">
-      ¡Hola {{ session['jugador'] }}! Selecciona un reto para comenzar:
-    </p>
+<div class="container">
+  <p style="text-align: center; font-size: 1.1em;">
+    ¡Hola {{ session['jugador'] }}! Selecciona un reto para comenzar:
+  </p>
 
-    <div class="grid">
-      {% for reto in retos %}
-        {% if reto.nombre == 'Adivina Quién' %}
-          <div class="card" onclick="location.href='/adivina'">
-        {% elif reto.nombre == 'Reto Grupal Random' %}
-          <div class="card" onclick="location.href='/reto_grupal'">
-        {% else %}
-          <div class="card" onclick="alert('Este reto aún no está implementado')">
-        {% endif %}
-            <div class="badge">+{{ reto.puntos }}</div>
-            <h3>{{ reto.nombre }}</h3>
-          </div>
-      {% endfor %}
-
-      <div class="card" onclick="location.href='{{ url_for('ranking_adivina') }}'">
-        <div class="badge">👑</div>
-        <h3>Ranking Adivina Quién</h3>
+  <div class="grid">
+    {% for reto in retos %}
+      {% set reto_url = (
+        '/adivina' if reto.nombre == 'Adivina Quién'
+        else '/reto_grupal' if reto.nombre == 'Reto Grupal Random'
+        else '#' 
+      ) %}
+      <div class="card {{ '' if reto.activo else 'desactivado' }}"
+           onclick="{% if reto.activo %}location.href='{{ reto_url }}'{% else %}alert('Este reto está desactivado'){% endif %}">
+        <div class="badge">+{{ reto.puntos }}</div>
+        <h3>{{ reto.nombre }}</h3>
       </div>
+    {% endfor %}
+
+    <div class="card" onclick="location.href='{{ url_for('ranking_adivina') }}'">
+      <div class="badge">👑</div>
+      <h3>Ranking Adivina Quién</h3>
     </div>
   </div>
+</div>
 
-  <footer>
-    &copy; 2025 TEAMS | <a href="https://teams.com.mx">teams.com.mx</a>
-  </footer>
+<footer>
+  &copy; 2025 TEAMS | <a href="https://teams.com.mx">teams.com.mx</a>
+</footer>
 
 </body>
 </html>

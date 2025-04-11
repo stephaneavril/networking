@@ -46,7 +46,7 @@ def index():
     if 'jugador' not in session:
         return redirect('/login')
     conn = get_db_connection()
-    retos = conn.execute("SELECT * FROM retos WHERE activo = 1").fetchall()
+    retos = conn.execute("SELECT * FROM retos").fetchall()
     conn.close()
     return render_template('index.html', retos=retos)
 
@@ -190,9 +190,36 @@ def calificar(id):
     conn.close()
     return redirect('/suite_reto_grupal')
 
+# -------------------- ADMINISTRACIÓN DE RETOS --------------------
+
+@app.route('/admin_retros', methods=['GET', 'POST'])
+def admin_retros():
+    if request.method == 'POST':
+        reto_id = request.form.get('reto_id')
+        nuevo_estado = request.form.get('activo')
+        conn = get_db_connection()
+        conn.execute("UPDATE retos SET activo = ? WHERE id = ?", (nuevo_estado, reto_id))
+        conn.commit()
+        conn.close()
+        return redirect('/admin_retros')
+
+    conn = get_db_connection()
+    retos = conn.execute("SELECT * FROM retos").fetchall()
+    conn.close()
+    return render_template("admin_retros.html", retos=retos)
+
 # -------------------- INICIAR SERVIDOR --------------------
 
 if __name__ == '__main__':
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     os.makedirs(app.config['UPLOAD_FOLDER_GRUPAL'], exist_ok=True)
     app.run(debug=True)
+
+@app.route('/admin_panel')
+def admin_panel():
+    conn = get_db_connection()
+    retos = conn.execute("SELECT * FROM retos").fetchall()
+    resultados = conn.execute("SELECT * FROM adivina_resultados ORDER BY puntos_extra DESC").fetchall()
+    participaciones = conn.execute("SELECT * FROM participaciones_grupales ORDER BY timestamp DESC").fetchall()
+    conn.close()
+    return render_template("admin_panel.html", retos=retos, resultados=resultados, participaciones=participaciones)

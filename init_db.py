@@ -65,7 +65,7 @@ retos = [
     ('Furthest Distance', 1, 'individual', 1),
     ('Nerd Off', 1, 'individual', 1),
     ('Tongue Twister', 1, 'individual', 1),
-    ('Reto Grupal Random', 2, 'equipo', 1)
+    ('Reto Grupal Random', 2, 'equipo', 1),
     ('Group Photo', 3, 'equipo', 1),
     ('Circle of Life', 2, 'equipo', 1),
     ('Vote on Media', 1, 'individual', 0),
