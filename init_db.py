@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS jugadores (
 )
 ''')
 
-# Tabla de participantes de "Adivina Quién"
+# Participantes para "Adivina Quién"
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS adivina_participantes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,19 +49,18 @@ CREATE TABLE IF NOT EXISTS adivina_participantes (
 )
 ''')
 
-# Tabla de resultados del reto "Adivina Quién"
+# Resultados para "Adivina Quién"
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS adivina_resultados (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre TEXT NOT NULL,
+    nombre_jugador TEXT NOT NULL,
     aciertos INTEGER NOT NULL,
-    puntos INTEGER NOT NULL,
-    bonus INTEGER DEFAULT 0,
+    puntos_extra INTEGER NOT NULL,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 )
 ''')
 
-# Insertar retos de ejemplo
+# Retos activos de ejemplo
 retos = [
     ('Furthest Distance', 1, 'individual', 1),
     ('Nerd Off', 1, 'individual', 1),
@@ -76,7 +75,7 @@ retos = [
 ]
 cursor.executemany("INSERT INTO retos (nombre, puntos, tipo, activo) VALUES (?, ?, ?, ?)", retos)
 
-# Participantes de ejemplo para Adivina Quién
+# Participantes para probar "Adivina Quién"
 participantes = [
     ("Lucía Ramírez", "Resolver conflictos sin drama", "Escalar montañas", "Toco el ukulele en bodas", "Amélie", "Emma Stone", "El aguacate"),
     ("Carlos Méndez", "Memoria fotográfica", "Cocinar ramen", "Me sé todos los diálogos de Shrek", "El Padrino", "Al Pacino", "Friends"),

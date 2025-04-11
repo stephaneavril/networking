@@ -77,7 +77,7 @@
         fetch('/adivina_finalizado', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jugador: "{{ session['jugador'] }}", aciertos })
+          body: JSON.stringify({ aciertos })
         })
         .then(res => res.json())
         .then(data => {
@@ -90,7 +90,7 @@
       const idx = Math.floor(Math.random() * indices_restantes.length);
       const i = indices_restantes[idx];
       actual = participantes[i];
-      indices_restantes.splice(idx, 1);
+      indices_restantes.splice(idx, 1); // elimina para no repetir
 
       const pistas = `
         <p><strong>Superpoder:</strong> ${actual.superpoder}</p>
@@ -107,6 +107,7 @@
     function verificar() {
       const seleccion = document.getElementById("respuesta").value.trim().toLowerCase();
       const correcto = actual.nombre_completo.trim().toLowerCase();
+
       if (seleccion === correcto) {
         document.getElementById("resultado").innerText = "✅ ¡Correcto!";
         aciertos++;
