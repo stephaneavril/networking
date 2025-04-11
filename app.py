@@ -47,9 +47,50 @@ def subir_evidencia():
 @app.route('/adivina')
 def adivina():
     conn = get_db_connection()
-    data = conn.execute("SELECT * FROM adivina_participantes").fetchall()
+    rows = conn.execute("SELECT * FROM adivina_participantes").fetchall()
     conn.close()
-    return render_template('adivina.html', participantes=data)
+    participantes = [dict(row) for row in rows]  # 👈 convierte a diccionarios
+    return render_template('adivina.html', participantes=participantes)
+
+@app.route('/adivina_finalizado', methods=['POST'])
+def adivina_finalizado():
+    data = request.get_json()
+    jugador = data.get("jugador")
+    aciertos = data.get("aciertos")
+
+    if not jugador or not isinstance(aciertos, int):
+        return jsonify({"error": "Datos inválidos"}), 400
+
+    puntos_por_acierto = 3
+    puntos_totales = aciertos * puntos_por_acierto
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Verificar si ya jugó
+    cursor.execute("SELECT * FROM adivina_resultados WHERE nombre = ?", (jugador,))
+    if cursor.fetchone():
+        conn.close()
+        return jsonify({"error": "Ya has completado el reto"}), 400
+
+    # Contar jugadores ya finalizados
+    cursor.execute("SELECT COUNT(*) FROM adivina_resultados")
+    finalizados = cursor.fetchone()[0]
+
+    # Cálculo de puntos extra
+    bonus = max(500 - (finalizados * 50), 0)
+    total_final = puntos_totales + bonus
+
+    # Insertar resultado
+    cursor.execute(
+        "INSERT INTO adivina_resultados (nombre, aciertos, puntos, bonus) VALUES (?, ?, ?, ?)",
+        (jugador, aciertos, total_final, bonus)
+    )
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": f"🎉 ¡Reto completado! {jugador} ganó {total_final} puntos ({aciertos} aciertos + {bonus} bonus)."})
 
 if __name__ == '__main__':
     app.run(debug=True)

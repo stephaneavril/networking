@@ -4,7 +4,7 @@ import sqlite3
 conn = sqlite3.connect('database.db')
 cursor = conn.cursor()
 
-# Crear tabla de retos
+# Tabla de retos
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS retos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS retos (
 )
 ''')
 
-# Crear tabla de evidencias
+# Tabla de evidencias
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS evidencias (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS evidencias (
 )
 ''')
 
+# Tabla del reto Adivina Quién
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS adivina_participantes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,6 +40,23 @@ CREATE TABLE IF NOT EXISTS adivina_participantes (
 )
 ''')
 
+# Retos de ejemplo
+retos = [
+    ('Furthest Distance', 1, 'individual', 1),
+    ('Nerd Off', 1, 'individual', 1),
+    ('Tongue Twister', 1, 'individual', 1),
+    ('Social', 2, 'equipo', 1),
+    ('Group Photo', 3, 'equipo', 1),
+    ('Circle of Life', 2, 'equipo', 1),
+    ('Vote on Media', 1, 'individual', 0),
+    ('Profile Deets', 1, 'individual', 0),
+    ('Sporty Spice', 1, 'equipo', 0),
+    ('Adivina Quién', 3, 'individual', 1)
+]
+
+cursor.executemany("INSERT INTO retos (nombre, puntos, tipo, activo) VALUES (?, ?, ?, ?)", retos)
+
+# Participantes de ejemplo para Adivina Quién
 participantes = [
     ("Lucía Ramírez", "Resolver conflictos sin drama", "Escalar montañas", "Toco el ukulele en bodas", "Amélie", "Emma Stone", "El aguacate"),
     ("Carlos Méndez", "Memoria fotográfica", "Cocinar ramen", "Me sé todos los diálogos de Shrek", "El Padrino", "Al Pacino", "Friends"),
@@ -51,22 +69,16 @@ cursor.executemany('''
     ) VALUES (?, ?, ?, ?, ?, ?, ?)
 ''', participantes)
 
-
-# Insertar retos de ejemplo
-retos = [
-    ('Furthest Distance', 1, 'individual', 1),
-    ('Nerd Off', 1, 'individual', 1),
-    ('Tongue Twister', 1, 'individual', 1),
-    ('Social', 2, 'equipo', 1),
-    ('Group Photo', 3, 'equipo', 1),
-    ('Circle of Life', 2, 'equipo', 1),
-    ('Vote on Media', 1, 'individual', 0),
-    ('Profile Deets', 1, 'individual', 0),
-    ('Sporty Spice', 1, 'equipo', 0)
-]
-
-cursor.executemany("INSERT INTO retos (nombre, puntos, tipo, activo) VALUES (?, ?, ?, ?)", retos)
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS adivina_resultados (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre_jugador TEXT NOT NULL,
+    aciertos INTEGER NOT NULL,
+    puntos_extra INTEGER DEFAULT 0,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+''')
 
 conn.commit()
 conn.close()
-print("✅ Base de datos creada con los retos y tabla de evidencias.")
+print("✅ Base de datos creada con todas las tablas y datos de prueba.")

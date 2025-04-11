@@ -22,7 +22,7 @@
       box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     }
 
-    select, button {
+    select {
       padding: 10px;
       font-size: 16px;
       width: 80%;
@@ -32,8 +32,13 @@
     }
 
     button {
+      padding: 10px 20px;
+      margin-top: 15px;
+      font-size: 16px;
+      border: none;
       background-color: #ec1c24;
       color: white;
+      border-radius: 6px;
       cursor: pointer;
     }
 
@@ -45,20 +50,19 @@
 </head>
 <body>
   <h1>🔍 Reto: Adivina Quién</h1>
-  <p>Selecciona quién crees que corresponde a la descripción. ¡Completa todos los personajes!</p>
 
   <div class="tarjeta">
     <div id="contenido"></div>
 
     <select id="respuesta">
-      <option value="">-- Selecciona un nombre --</option>
-      {% for persona in participantes %}
-        <option value="{{ persona.nombre_completo }}">{{ persona.nombre_completo }}</option>
+      <option value="" disabled selected>Selecciona un nombre</option>
+      {% for p in participantes %}
+        <option value="{{ p.nombre_completo }}">{{ p.nombre_completo }}</option>
       {% endfor %}
     </select>
 
     <br>
-    <button onclick="verificar()">Validar</button>
+    <button onclick="verificar()">Responder</button>
     <div id="resultado"></div>
   </div>
 
@@ -66,49 +70,56 @@
     const participantes = {{ participantes|tojson }};
     let indices_restantes = participantes.map((_, i) => i);
     let actual;
-
+    let aciertos = 0;
+  
     function mostrarFrase() {
       if (indices_restantes.length === 0) {
-        document.getElementById("contenido").innerHTML = "🎉 ¡Completaste todos los personajes!";
-        document.getElementById("respuesta").style.display = "none";
-        document.querySelector("button").style.display = "none";
-        document.getElementById("resultado").innerText = "";
+        const nombre = prompt("🎯 ¡Reto terminado! Ingresa tu nombre completo para registrar tus puntos:");
+        if (nombre) {
+          fetch('/adivina_finalizado', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jugador: nombre, aciertos })
+          })
+          .then(res => res.json())
+          .then(data => {
+            alert(data.message || data.error);
+            location.reload();
+          });
+        }
         return;
       }
-
+  
       const idx = Math.floor(Math.random() * indices_restantes.length);
       const i = indices_restantes[idx];
       actual = participantes[i];
-      indices_restantes.splice(idx, 1); // evita repetir
-
-      const opciones = [
-        `<strong>Superpoder:</strong> ${actual.superpoder}`,
-        `<strong>Pasión:</strong> ${actual.pasion}`,
-        `<strong>Dato curioso:</strong> ${actual.dato_curioso}`,
-        `<strong>No soporta:</strong> ${actual.no_soporto}`,
-        `<strong>Película favorita:</strong> ${actual.pelicula}`,
-        `<strong>Actor favorito:</strong> ${actual.actor}`
-      ].filter(Boolean); // evita mostrar null
-
-      const seleccion = opciones[Math.floor(Math.random() * opciones.length)];
-      document.getElementById("contenido").innerHTML = seleccion;
-      document.getElementById("respuesta").selectedIndex = 0;
+      indices_restantes.splice(idx, 1);
+  
+      const pistas = `
+        <p><strong>Superpoder:</strong> ${actual.superpoder}</p>
+        <p><strong>Pasión:</strong> ${actual.pasion}</p>
+        <p><strong>Dato curioso:</strong> ${actual.dato_curioso}</p>
+        <p><strong>No soporta:</strong> ${actual.no_soporto}</p>
+      `;
+  
+      document.getElementById("contenido").innerHTML = pistas;
+      document.getElementById("respuesta").value = "";
       document.getElementById("resultado").innerText = "";
     }
-
+  
     function verificar() {
       const seleccion = document.getElementById("respuesta").value.trim().toLowerCase();
       const correcto = actual.nombre_completo.trim().toLowerCase();
-
       if (seleccion === correcto) {
         document.getElementById("resultado").innerText = "✅ ¡Correcto!";
-        setTimeout(mostrarFrase, 1500);
+        aciertos++;
+        setTimeout(mostrarFrase, 1000);
       } else {
-        document.getElementById("resultado").innerText = "❌ Incorrecto. Intenta de nuevo.";
+        document.getElementById("resultado").innerText = "❌ Intenta con otro nombre";
       }
     }
-
+  
     mostrarFrase();
   </script>
-</body>
+  </body>
 </html>
