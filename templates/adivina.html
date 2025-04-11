@@ -71,42 +71,39 @@
     let indices_restantes = participantes.map((_, i) => i);
     let actual;
     let aciertos = 0;
-  
+
     function mostrarFrase() {
       if (indices_restantes.length === 0) {
-        const nombre = prompt("🎯 ¡Reto terminado! Ingresa tu nombre completo para registrar tus puntos:");
-        if (nombre) {
-          fetch('/adivina_finalizado', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ jugador: nombre, aciertos })
-          })
-          .then(res => res.json())
-          .then(data => {
-            alert(data.message || data.error);
-            location.reload();
-          });
-        }
+        fetch('/adivina_finalizado', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aciertos })
+        })
+        .then(res => res.json())
+        .then(data => {
+          alert(data.message || data.error);
+          window.location.href = "/adivina_ranking";
+        });
         return;
       }
-  
+
       const idx = Math.floor(Math.random() * indices_restantes.length);
       const i = indices_restantes[idx];
       actual = participantes[i];
       indices_restantes.splice(idx, 1);
-  
+
       const pistas = `
         <p><strong>Superpoder:</strong> ${actual.superpoder}</p>
         <p><strong>Pasión:</strong> ${actual.pasion}</p>
         <p><strong>Dato curioso:</strong> ${actual.dato_curioso}</p>
         <p><strong>No soporta:</strong> ${actual.no_soporto}</p>
       `;
-  
+
       document.getElementById("contenido").innerHTML = pistas;
       document.getElementById("respuesta").value = "";
       document.getElementById("resultado").innerText = "";
     }
-  
+
     function verificar() {
       const seleccion = document.getElementById("respuesta").value.trim().toLowerCase();
       const correcto = actual.nombre_completo.trim().toLowerCase();
@@ -118,8 +115,8 @@
         document.getElementById("resultado").innerText = "❌ Intenta con otro nombre";
       }
     }
-  
+
     mostrarFrase();
   </script>
-  </body>
+</body>
 </html>

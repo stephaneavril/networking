@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Ingresar a Networking Bingo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      background-color: #0c0e2c;
+      color: white;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .login-box {
+      background-color: #1f2140;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      text-align: center;
+      max-width: 400px;
+      width: 100%;
+    }
+
+    input {
+      display: block;
+      margin: 15px auto;
+      padding: 12px;
+      width: 90%;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+    }
+
+    button {
+      background-color: #ec1c24;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <h2>🎉 Bienvenido al Networking Bingo</h2>
+    <p>Ingresa tus datos para comenzar</p>
+    <form method="POST">
+      <input type="text" name="nombre" placeholder="Nombre completo" required>
+      <input type="email" name="correo" placeholder="Correo electrónico" required>
+      <button type="submit">Ingresar</button>
+    </form>
+  </div>
+</body>
+</html>

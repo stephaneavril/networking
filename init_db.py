@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS evidencias (
 )
 ''')
 
-# Tabla del reto Adivina Quién
+# Tabla de participantes de "Adivina Quién"
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS adivina_participantes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,7 +40,19 @@ CREATE TABLE IF NOT EXISTS adivina_participantes (
 )
 ''')
 
-# Retos de ejemplo
+# Tabla de resultados del reto "Adivina Quién"
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS adivina_resultados (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL,
+    aciertos INTEGER NOT NULL,
+    puntos INTEGER NOT NULL,
+    bonus INTEGER DEFAULT 0,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+''')
+
+# Insertar retos de ejemplo
 retos = [
     ('Furthest Distance', 1, 'individual', 1),
     ('Nerd Off', 1, 'individual', 1),
@@ -53,7 +65,6 @@ retos = [
     ('Sporty Spice', 1, 'equipo', 0),
     ('Adivina Quién', 3, 'individual', 1)
 ]
-
 cursor.executemany("INSERT INTO retos (nombre, puntos, tipo, activo) VALUES (?, ?, ?, ?)", retos)
 
 # Participantes de ejemplo para Adivina Quién
@@ -62,23 +73,12 @@ participantes = [
     ("Carlos Méndez", "Memoria fotográfica", "Cocinar ramen", "Me sé todos los diálogos de Shrek", "El Padrino", "Al Pacino", "Friends"),
     ("Ana Torres", "Empatía sin esfuerzo", "Bailar salsa", "Colecciono plantas raras", "Intensamente", "Margot Robbie", "Café")
 ]
-
 cursor.executemany('''
     INSERT INTO adivina_participantes (
         nombre_completo, superpoder, pasion, dato_curioso, pelicula, actor, no_soporto
     ) VALUES (?, ?, ?, ?, ?, ?, ?)
 ''', participantes)
 
-cursor.execute('''
-CREATE TABLE IF NOT EXISTS adivina_resultados (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre_jugador TEXT NOT NULL,
-    aciertos INTEGER NOT NULL,
-    puntos_extra INTEGER DEFAULT 0,
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-)
-''')
-
 conn.commit()
 conn.close()
-print("✅ Base de datos creada con todas las tablas y datos de prueba.")
+print("✅ Base de datos creada con todas las tablas y datos de ejemplo.")

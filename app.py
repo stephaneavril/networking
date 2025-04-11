@@ -1,9 +1,10 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 import sqlite3
 import os
 from datetime import datetime
 
 app = Flask(__name__)
+app.secret_key = 'clave-segura'
 app.config['UPLOAD_FOLDER'] = 'evidencias'
 
 def get_db_connection():
@@ -11,8 +12,18 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        session['jugador'] = request.form['nombre']
+        session['correo'] = request.form['correo']
+        return redirect('/')
+    return render_template('login.html')
+
 @app.route('/')
 def index():
+    if 'jugador' not in session:
+        return redirect('/login')
     conn = get_db_connection()
     retos = conn.execute("SELECT * FROM retos WHERE activo = 1").fetchall()
     conn.close()
@@ -27,12 +38,10 @@ def subir_evidencia():
     if not nombre or not archivo or not reto_id:
         return "❌ Faltan datos", 400
 
-    # Guardar archivo
     nombre_archivo = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{archivo.filename}"
     ruta_archivo = os.path.join(app.config['UPLOAD_FOLDER'], nombre_archivo)
     archivo.save(ruta_archivo)
 
-    # Guardar en base de datos
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
@@ -46,19 +55,24 @@ def subir_evidencia():
 
 @app.route('/adivina')
 def adivina():
+    if 'jugador' not in session:
+        return redirect('/login')
     conn = get_db_connection()
     rows = conn.execute("SELECT * FROM adivina_participantes").fetchall()
     conn.close()
-    participantes = [dict(row) for row in rows]  # 👈 convierte a diccionarios
+    participantes = [dict(row) for row in rows]
     return render_template('adivina.html', participantes=participantes)
 
 @app.route('/adivina_finalizado', methods=['POST'])
 def adivina_finalizado():
+    if 'jugador' not in session:
+        return jsonify({"error": "Sesión no válida"}), 401
+
     data = request.get_json()
-    jugador = data.get("jugador")
+    jugador = session['jugador']
     aciertos = data.get("aciertos")
 
-    if not jugador or not isinstance(aciertos, int):
+    if not isinstance(aciertos, int):
         return jsonify({"error": "Datos inválidos"}), 400
 
     puntos_por_acierto = 3
@@ -67,30 +81,47 @@ def adivina_finalizado():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Verificar si ya jugó
-    cursor.execute("SELECT * FROM adivina_resultados WHERE nombre = ?", (jugador,))
+    cursor.execute("SELECT * FROM adivina_resultados WHERE nombre_jugador = ?", (jugador,))
     if cursor.fetchone():
         conn.close()
         return jsonify({"error": "Ya has completado el reto"}), 400
 
-    # Contar jugadores ya finalizados
     cursor.execute("SELECT COUNT(*) FROM adivina_resultados")
     finalizados = cursor.fetchone()[0]
 
-    # Cálculo de puntos extra
     bonus = max(500 - (finalizados * 50), 0)
     total_final = puntos_totales + bonus
 
-    # Insertar resultado
     cursor.execute(
-        "INSERT INTO adivina_resultados (nombre, aciertos, puntos, bonus) VALUES (?, ?, ?, ?)",
-        (jugador, aciertos, total_final, bonus)
+        "INSERT INTO adivina_resultados (nombre_jugador, aciertos, puntos_extra) VALUES (?, ?, ?)",
+        (jugador, aciertos, total_final)
     )
-
     conn.commit()
     conn.close()
 
-    return jsonify({"message": f"🎉 ¡Reto completado! {jugador} ganó {total_final} puntos ({aciertos} aciertos + {bonus} bonus)."})
+    return jsonify({
+        "message": f"🎉 ¡Reto completado! {jugador} ganó {total_final} puntos ({aciertos} aciertos + {bonus} bonus)."
+    })
+
+@app.route('/adivina_ranking')
+def adivina_ranking():
+    conn = get_db_connection()
+    resultados = conn.execute(
+        "SELECT nombre_jugador, aciertos, puntos_extra, timestamp FROM adivina_resultados ORDER BY puntos_extra DESC"
+    ).fetchall()
+    conn.close()
+    return render_template('adivina_ranking.html', resultados=resultados)
+
+@app.route('/ranking_adivina')
+def ranking_adivina():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM adivina_resultados ORDER BY puntos DESC")
+    rows = cursor.fetchall()
+    conn.close()
+
+    return render_template('ranking_adivina.html', resultados=rows, jugador=session.get('jugador'))
 
 if __name__ == '__main__':
     app.run(debug=True)

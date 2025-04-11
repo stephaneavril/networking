@@ -2,8 +2,8 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Networking Bingo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -20,14 +20,14 @@
       font-weight: bold;
     }
     .container {
-      max-width: 600px;
+      max-width: 700px;
       margin: 30px auto;
       padding: 20px;
     }
     .grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
     }
     .card {
       background: #1f2140;
@@ -52,6 +52,7 @@
       padding: 4px 8px;
       border-radius: 8px;
       font-size: 0.75em;
+      display: inline-block;
     }
     footer {
       text-align: center;
@@ -60,25 +61,39 @@
       background-color: #15173c;
       color: #aaa;
     }
+    footer a {
+      color: #ec1c24;
+      text-decoration: none;
+    }
   </style>
 </head>
 <body>
+
   <header>Networking Bingo</header>
 
   <div class="container">
-    <p style="text-align: center; font-size: 1.1em;">Completa 6 retos 🎯</p>
+    <p style="text-align: center; font-size: 1.1em;">
+      ¡Hola {{ session['jugador'] }}! Selecciona un reto para comenzar:
+    </p>
+
     <div class="grid">
       {% for reto in retos %}
-      <div class="card">
-        <div class="badge">+{{ reto['puntos'] }}</div>
-        <h3>{{ reto['nombre'] }}</h3>
-      </div>
+        <div class="card" onclick="location.href='/adivina' if reto.nombre == 'Adivina Quién' else alert('Sube evidencia en otra vista')">
+          <div class="badge">+{{ reto.puntos }}</div>
+          <h3>{{ reto.nombre }}</h3>
+        </div>
       {% endfor %}
+
+      <div class="card" onclick="location.href='/ranking_adivina'">
+        <div class="badge">👑</div>
+        <h3>Ranking Adivina Quién</h3>
+      </div>
     </div>
   </div>
 
   <footer>
-    &copy; 2025 TEAMS | <a href="https://teams.com.mx" style="color: #ec1c24; text-decoration: none;">teams.com.mx</a>
+    &copy; 2025 TEAMS | <a href="https://teams.com.mx">teams.com.mx</a>
   </footer>
+
 </body>
 </html>
