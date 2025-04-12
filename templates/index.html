@@ -93,29 +93,32 @@
 
   <div class="grid">
     {% for reto in retos %}
-  {% set reto_url = (
-    '/adivina' if reto.nombre == 'Adivina Quién'
-    else '/reto_grupal' if reto.nombre == 'Reto en Equipos'
-    else '/reto_foto' if reto.nombre == 'Reto Foto'
-    else '#' 
-  ) %}
-  <div class="card {{ '' if reto.activo else 'desactivado' }}"
-       onclick="{% if reto.activo %}location.href='{{ reto_url }}'{% else %}alert('Este reto está desactivado'){% endif %}">
-    <div class="badge">+{{ reto.puntos }}</div>
-    <h3>{{ reto.nombre }}</h3>
-  </div>
-{% endfor %}
-
+      {% set reto_url = (
+        '/adivina' if reto.nombre == 'Adivina Quién'
+        else '/reto_grupal' if reto.nombre == 'Reto en Equipos'
+        else '/reto_foto' if reto.nombre == 'Reto Foto'
+        else '/ver_fotos_reto_foto' if reto.nombre == 'VER FOTOS Y VOTAR'
+        else '#'
+      ) %}
+      <div class="card {{ '' if reto.activo else 'desactivado' }}"
+           onclick="{% if reto.activo %}location.href='{{ reto_url }}'{% else %}alert('Este reto está desactivado'){% endif %}">
+        <div class="badge">
+          {% if reto.nombre == 'VER FOTOS Y VOTAR' %}
+            🗳
+          {% else %}
+            +{{ reto.puntos }}
+          {% endif %}
+        </div>
+        <h3>{{ reto.nombre }}</h3>
+      </div>
+    {% endfor %}
+  
     <div class="card" onclick="location.href='{{ url_for('ranking_adivina') }}'">
       <div class="badge">👑</div>
       <h3>Ranking Adivina Quién</h3>
     </div>
-
-    <div class="card" onclick="location.href='/ver_fotos_reto_foto'">
-      <div class="badge">📷</div>
-      <h3>Ver y Votar Fotos</h3>
-    </div>
   </div>
+  
 </div>
 
 <footer>
