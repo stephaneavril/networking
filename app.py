@@ -259,6 +259,21 @@ def votar_fotos():
     conn.close()
     return redirect('/')
 
+@app.route('/ranking_fotos')
+def ranking_fotos():
+    if 'jugador' not in session:
+        return redirect('/login')
+    conn = get_db_connection()
+    ranking = conn.execute('''
+        SELECT nombre, archivo, SUM(puntos) as total_puntos
+        FROM votos_reto_foto
+        JOIN reto_foto ON votos_reto_foto.id_foto = reto_foto.id
+        GROUP BY id_foto
+        ORDER BY total_puntos DESC
+    ''').fetchall()
+    conn.close()
+    return render_template("ranking_fotos.html", ranking=ranking)
+
 # -------------------- RUN --------------------
 if __name__ == '__main__':
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
