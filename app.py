@@ -280,15 +280,6 @@ def ver_fotos_reto_foto():
     conn.close()
     return render_template("ver_fotos_reto_foto.html", fotos=fotos, votos=votos_dict)
 
-@app.route('/ver_fotos_reto_foto')
-def ver_fotos_reto_foto():
-    if 'jugador' not in session:
-        return redirect('/login')
-    conn = get_db_connection()
-    fotos = conn.execute("SELECT * FROM reto_foto").fetchall()
-    conn.close()
-    return render_template('ver_fotos_reto_foto.html', fotos=fotos)
-
 @app.route('/votar_fotos', methods=['POST'])
 def votar_fotos():
     if 'correo' not in session:
