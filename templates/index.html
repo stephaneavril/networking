@@ -97,7 +97,7 @@
         '/adivina' if reto.nombre == 'Adivina Quién'
         else '/reto_grupal' if reto.nombre == 'Reto en Equipos'
         else '/reto_foto' if reto.nombre == 'Reto Foto'
-        else '/ver_fotos_reto_foto' if reto.nombre == 'Ver fotos y votar'
+        else '/ver_fotos_reto_foto' if reto.nombre|lower == 'ver fotos y votar'
         else '/ranking_fotos' if reto.nombre == 'Ranking Fotos'
         else '#'
       ) %}
