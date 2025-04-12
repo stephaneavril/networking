@@ -2,7 +2,7 @@ import random
 import os
 import sqlite3
 from datetime import datetime
-from flask import Flask, render_template, request, jsonify, session, redirect
+from flask import Flask, render_template, request, jsonify, session, redirect, flash
 
 app = Flask(__name__)
 app.secret_key = 'clave-segura'
@@ -240,7 +240,8 @@ def reto_foto():
         conn.commit()
         conn.close()
 
-        return redirect('/reto_foto_subido')
+        flash("✅ Foto subida con éxito. ¡Gracias por participar!")
+        return redirect('/')
 
     conn.close()
     return render_template("reto_foto.html", ya_existe=ya_existe)
