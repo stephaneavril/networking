@@ -19,7 +19,6 @@ def make_session_permanent():
     session.permanent = True
 
 # -------------------- LOGIN --------------------
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -40,18 +39,16 @@ def login():
     return render_template('login.html')
 
 # -------------------- HOME --------------------
-
 @app.route('/')
 def index():
     if 'jugador' not in session:
         return redirect('/login')
     conn = get_db_connection()
-    retos = conn.execute("SELECT * FROM retos WHERE activo = 1").fetchall()  # ✅ Correcto
+    retos = conn.execute("SELECT * FROM retos WHERE activo = 1").fetchall()
     conn.close()
     return render_template('index.html', retos=retos)
 
 # -------------------- RETO ADIVINA --------------------
-
 @app.route('/adivina')
 def adivina():
     if 'jugador' not in session:
@@ -60,6 +57,7 @@ def adivina():
     rows = conn.execute("SELECT * FROM adivina_participantes").fetchall()
     conn.close()
     participantes = [dict(row) for row in rows]
+    random.shuffle(participantes)
     return render_template('adivina.html', participantes=participantes)
 
 @app.route('/adivina_finalizado', methods=['POST'])
@@ -74,8 +72,7 @@ def adivina_finalizado():
     if not isinstance(aciertos, int):
         return jsonify({"error": "Datos inválidos"}), 400
 
-    puntos_por_acierto = 3
-    puntos_totales = aciertos * puntos_por_acierto
+    puntos_totales = aciertos * 3
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -89,10 +86,8 @@ def adivina_finalizado():
     bonus = max(500 - (finalizados * 50), 0)
     total_final = puntos_totales + bonus
 
-    cursor.execute(
-        "INSERT INTO adivina_resultados (nombre_jugador, aciertos, puntos_extra) VALUES (?, ?, ?)",
-        (jugador, aciertos, total_final)
-    )
+    cursor.execute("INSERT INTO adivina_resultados (nombre_jugador, aciertos, puntos_extra) VALUES (?, ?, ?)",
+                   (jugador, aciertos, total_final))
     conn.commit()
     conn.close()
 
@@ -111,14 +106,11 @@ def ranking_adivina():
         FROM adivina_resultados
         ORDER BY puntos_extra DESC, timestamp ASC
     ''').fetchall()
-    mi_resultado = conn.execute(
-        "SELECT * FROM adivina_resultados WHERE nombre_jugador = ?", (session['jugador'],)
-    ).fetchone()
+    mi_resultado = conn.execute("SELECT * FROM adivina_resultados WHERE nombre_jugador = ?", (session['jugador'],)).fetchone()
     conn.close()
     return render_template('ranking_adivina.html', resultados=resultados, mi_resultado=mi_resultado)
 
 # -------------------- SUBIR EVIDENCIA INDIVIDUAL --------------------
-
 @app.route('/subir_evidencia', methods=['POST'])
 def subir_evidencia():
     if 'jugador' not in session:
@@ -133,16 +125,13 @@ def subir_evidencia():
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     archivo.save(ruta_archivo)
     conn = get_db_connection()
-    conn.execute(
-        "INSERT INTO evidencias (reto_id, nombre_participante, archivo) VALUES (?, ?, ?)",
-        (reto_id, nombre, nombre_archivo)
-    )
+    conn.execute("INSERT INTO evidencias (reto_id, nombre_participante, archivo) VALUES (?, ?, ?)",
+                 (reto_id, nombre, nombre_archivo))
     conn.commit()
     conn.close()
     return "✅ Evidencia enviada con éxito"
 
-# -------------------- RETO GRUPAL RANDOM --------------------
-
+# -------------------- RETO GRUPAL --------------------
 @app.route('/reto_grupal')
 def reto_grupal():
     if 'jugador' not in session:
@@ -152,40 +141,29 @@ def reto_grupal():
     conn.close()
     return render_template("reto_grupal.html", reto=reto['nombre'])
 
-from flask import flash
-
 @app.route('/guardar_reto_grupal', methods=['POST'])
 def guardar_reto_grupal():
     reto = request.form.get('reto')
     nombres = request.form.get('nombres')
     if not reto or not nombres:
         return "❌ Faltan datos", 400
-
     conn = get_db_connection()
-    conn.execute("""
-        INSERT INTO participaciones_grupales (reto, nombres_participantes)
-        VALUES (?, ?)
-    """, (reto, nombres))
+    conn.execute("INSERT INTO participaciones_grupales (reto, nombres_participantes) VALUES (?, ?)", (reto, nombres))
     conn.commit()
     conn.close()
-
     flash("✅ ¡Gracias! Tu participación fue registrada.")
     return redirect('/')
 
-# -------------------- ADMIN PANEL COMPLETO --------------------
-
+# -------------------- ADMIN PANEL --------------------
 @app.route('/admin_panel', methods=['GET', 'POST'])
 def admin_panel():
     conn = get_db_connection()
-
-    # Activación/desactivación
     if request.method == 'POST':
         reto_id = request.form.get('reto_id')
         nuevo_estado = request.form.get('activo')
         conn.execute("UPDATE retos SET activo = ? WHERE id = ?", (nuevo_estado, reto_id))
         conn.commit()
 
-    # Datos para el panel
     retos = conn.execute("SELECT * FROM retos").fetchall()
     resultados = conn.execute("SELECT * FROM adivina_resultados ORDER BY puntos_extra DESC").fetchall()
     participaciones = conn.execute("SELECT * FROM participaciones_grupales ORDER BY timestamp DESC").fetchall()
@@ -203,46 +181,31 @@ def calificar(id):
     conn.close()
     return redirect('/admin_panel')
 
-# -------------------- RUN --------------------
-
-if __name__ == '__main__':
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    os.makedirs(app.config['UPLOAD_FOLDER_GRUPAL'], exist_ok=True)
-    app.run(debug=True)
-
+# -------------------- RETO FOTO --------------------
 @app.route('/reto_foto', methods=['GET', 'POST'])
 def reto_foto():
     if 'jugador' not in session:
         return redirect('/login')
-
     conn = get_db_connection()
     correo = session['correo']
-
-    # Verificar si ya subió una foto
     ya_existe = conn.execute("SELECT * FROM reto_foto WHERE correo = ?", (correo,)).fetchone()
-
     if request.method == 'POST':
         if ya_existe:
             conn.close()
             return "❌ Ya has subido una foto para este reto."
-
         archivo = request.files.get('foto')
         if not archivo:
             return "❌ No se proporcionó ninguna imagen."
-
         nombre = session['jugador']
         filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{archivo.filename}"
         path = os.path.join('static/fotos_reto_foto', filename)
         os.makedirs('static/fotos_reto_foto', exist_ok=True)
         archivo.save(path)
-
         conn.execute("INSERT INTO reto_foto (correo, nombre, archivo) VALUES (?, ?, ?)", (correo, nombre, filename))
         conn.commit()
         conn.close()
-
         flash("✅ Foto subida con éxito. ¡Gracias por participar!")
         return redirect('/')
-
     conn.close()
     return render_template("reto_foto.html", ya_existe=ya_existe)
 
@@ -250,27 +213,22 @@ def reto_foto():
 def ver_fotos_reto_foto():
     if 'correo' not in session:
         return redirect('/login')
-
     correo = session['correo']
     conn = get_db_connection()
-
     if request.method == 'POST':
         total_puntos = sum(int(v) for v in request.form.values() if v.isdigit())
         if total_puntos > 3:
             conn.close()
-            return "❌ Solo puedes asignar hasta 3 puntos en total.", 400
-
+            return "❌ Solo puedes asignar hasta 3 puntos.", 400
         for key, val in request.form.items():
             if key.startswith("foto_") and val:
                 id_foto = int(key.split("_")[1])
                 puntos = int(val)
                 try:
-                    conn.execute(
-                        "INSERT INTO votos_reto_foto (correo_votante, id_foto, puntos) VALUES (?, ?, ?)",
-                        (correo, id_foto, puntos)
-                    )
+                    conn.execute("INSERT INTO votos_reto_foto (correo_votante, id_foto, puntos) VALUES (?, ?, ?)",
+                                 (correo, id_foto, puntos))
                 except sqlite3.IntegrityError:
-                    continue  # Ya votó por esta foto
+                    continue
         conn.commit()
         conn.close()
         return redirect('/ver_fotos_reto_foto')
@@ -285,14 +243,11 @@ def ver_fotos_reto_foto():
 def votar_fotos():
     if 'correo' not in session:
         return redirect('/login')
-
     correo_votante = session['correo']
-    votos = request.form  # Dict con {id_foto: puntos}
-
+    votos = request.form
     total_puntos = sum([int(v) for v in votos.values() if v.isdigit()])
     if total_puntos != 3:
         return "❌ Debes asignar exactamente 3 puntos", 400
-
     conn = get_db_connection()
     for id_foto, puntos in votos.items():
         if puntos and puntos.isdigit():
@@ -303,3 +258,10 @@ def votar_fotos():
     conn.commit()
     conn.close()
     return redirect('/')
+
+# -------------------- RUN --------------------
+if __name__ == '__main__':
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    os.makedirs(app.config['UPLOAD_FOLDER_GRUPAL'], exist_ok=True)
+    os.makedirs('static/fotos_reto_foto', exist_ok=True)
+    app.run(debug=True)
