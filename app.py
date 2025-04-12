@@ -152,25 +152,25 @@ def reto_grupal():
     conn.close()
     return render_template("reto_grupal.html", reto=reto['nombre'])
 
+from flask import flash
+
 @app.route('/guardar_reto_grupal', methods=['POST'])
 def guardar_reto_grupal():
     reto = request.form.get('reto')
     nombres = request.form.get('nombres')
-    archivo = request.files.get('foto')
-    if not reto or not nombres or not archivo:
+    if not reto or not nombres:
         return "❌ Faltan datos", 400
-    nombre_archivo = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{archivo.filename}"
-    ruta_archivo = os.path.join(app.config['UPLOAD_FOLDER_GRUPAL'], nombre_archivo)
-    os.makedirs(app.config['UPLOAD_FOLDER_GRUPAL'], exist_ok=True)
-    archivo.save(ruta_archivo)
+
     conn = get_db_connection()
     conn.execute("""
-        INSERT INTO participaciones_grupales (reto, nombres_participantes, archivo)
-        VALUES (?, ?, ?)
-    """, (reto, nombres, nombre_archivo))
+        INSERT INTO participaciones_grupales (reto, nombres_participantes)
+        VALUES (?, ?)
+    """, (reto, nombres))
     conn.commit()
     conn.close()
-    return "✅ Reto grupal registrado con éxito"
+
+    flash("✅ ¡Gracias! Tu participación fue registrada.")
+    return redirect('/')
 
 # -------------------- ADMIN PANEL COMPLETO --------------------
 

@@ -77,6 +77,16 @@
 <header>Networking Bingo</header>
 
 <div class="container">
+  {% with mensajes = get_flashed_messages() %}
+  {% if mensajes %}
+    <div style="background: #1f2140; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+      {% for msg in mensajes %}
+        <p style="color: lightgreen; margin: 0;">{{ msg }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
   <p style="text-align: center; font-size: 1.1em;">
     ¡Hola {{ session['jugador'] }}! Selecciona un reto para comenzar:
   </p>
@@ -85,7 +95,7 @@
     {% for reto in retos %}
       {% set reto_url = (
         '/adivina' if reto.nombre == 'Adivina Quién'
-        else '/reto_grupal' if reto.nombre == 'Reto Grupal Random'
+        else '/reto_grupal' if reto.nombre == 'Reto en Equipos'
         else '#' 
       ) %}
       <div class="card {{ '' if reto.activo else 'desactivado' }}"
