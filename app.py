@@ -209,3 +209,105 @@ if __name__ == '__main__':
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     os.makedirs(app.config['UPLOAD_FOLDER_GRUPAL'], exist_ok=True)
     app.run(debug=True)
+
+@app.route('/reto_foto', methods=['GET', 'POST'])
+def reto_foto():
+    if 'jugador' not in session:
+        return redirect('/login')
+
+    conn = get_db_connection()
+    correo = session['correo']
+
+    # Verificar si ya subió una foto
+    ya_existe = conn.execute("SELECT * FROM reto_foto WHERE correo = ?", (correo,)).fetchone()
+
+    if request.method == 'POST':
+        if ya_existe:
+            conn.close()
+            return "❌ Ya has subido una foto para este reto."
+
+        archivo = request.files.get('foto')
+        if not archivo:
+            return "❌ No se proporcionó ninguna imagen."
+
+        nombre = session['jugador']
+        filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{archivo.filename}"
+        path = os.path.join('static/fotos_reto_foto', filename)
+        os.makedirs('static/fotos_reto_foto', exist_ok=True)
+        archivo.save(path)
+
+        conn.execute("INSERT INTO reto_foto (correo, nombre, archivo) VALUES (?, ?, ?)", (correo, nombre, filename))
+        conn.commit()
+        conn.close()
+
+        return redirect('/reto_foto_subido')
+
+    conn.close()
+    return render_template("reto_foto.html", ya_existe=ya_existe)
+
+@app.route('/ver_fotos_reto_foto', methods=['GET', 'POST'])
+def ver_fotos_reto_foto():
+    if 'correo' not in session:
+        return redirect('/login')
+
+    correo = session['correo']
+    conn = get_db_connection()
+
+    if request.method == 'POST':
+        total_puntos = sum(int(v) for v in request.form.values() if v.isdigit())
+        if total_puntos > 3:
+            conn.close()
+            return "❌ Solo puedes asignar hasta 3 puntos en total.", 400
+
+        for key, val in request.form.items():
+            if key.startswith("foto_") and val:
+                id_foto = int(key.split("_")[1])
+                puntos = int(val)
+                try:
+                    conn.execute(
+                        "INSERT INTO votos_reto_foto (correo_votante, id_foto, puntos) VALUES (?, ?, ?)",
+                        (correo, id_foto, puntos)
+                    )
+                except sqlite3.IntegrityError:
+                    continue  # Ya votó por esta foto
+        conn.commit()
+        conn.close()
+        return redirect('/ver_fotos_reto_foto')
+
+    fotos = conn.execute("SELECT * FROM reto_foto").fetchall()
+    votos = conn.execute("SELECT * FROM votos_reto_foto WHERE correo_votante = ?", (correo,)).fetchall()
+    votos_dict = {v['id_foto']: v['puntos'] for v in votos}
+    conn.close()
+    return render_template("ver_fotos_reto_foto.html", fotos=fotos, votos=votos_dict)
+
+@app.route('/ver_fotos_reto_foto')
+def ver_fotos_reto_foto():
+    if 'jugador' not in session:
+        return redirect('/login')
+    conn = get_db_connection()
+    fotos = conn.execute("SELECT * FROM reto_foto").fetchall()
+    conn.close()
+    return render_template('ver_fotos_reto_foto.html', fotos=fotos)
+
+@app.route('/votar_fotos', methods=['POST'])
+def votar_fotos():
+    if 'correo' not in session:
+        return redirect('/login')
+
+    correo_votante = session['correo']
+    votos = request.form  # Dict con {id_foto: puntos}
+
+    total_puntos = sum([int(v) for v in votos.values() if v.isdigit()])
+    if total_puntos != 3:
+        return "❌ Debes asignar exactamente 3 puntos", 400
+
+    conn = get_db_connection()
+    for id_foto, puntos in votos.items():
+        if puntos and puntos.isdigit():
+            conn.execute('''
+                INSERT OR REPLACE INTO votos_reto_foto (correo_votante, id_foto, puntos)
+                VALUES (?, ?, ?)
+            ''', (correo_votante, int(id_foto), int(puntos)))
+    conn.commit()
+    conn.close()
+    return redirect('/')

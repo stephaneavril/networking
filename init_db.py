@@ -60,22 +60,23 @@ CREATE TABLE IF NOT EXISTS adivina_resultados (
 )
 ''')
 
-# Retos activos de ejemplo
+# Insertar retos base
 retos = [
     ('Furthest Distance', 1, 'individual', 1),
     ('Nerd Off', 1, 'individual', 1),
     ('Tongue Twister', 1, 'individual', 1),
-    ('Reto Grupal Random', 2, 'equipo', 1),
+    ('Reto en Equipos', 2, 'equipo', 1),
     ('Group Photo', 3, 'equipo', 1),
     ('Circle of Life', 2, 'equipo', 1),
     ('Vote on Media', 1, 'individual', 0),
     ('Profile Deets', 1, 'individual', 0),
     ('Sporty Spice', 1, 'equipo', 0),
-    ('Adivina Quién', 3, 'individual', 1)
+    ('Adivina Quién', 3, 'individual', 1),
+    ('Reto Foto', 3, 'individual', 1)
 ]
 cursor.executemany("INSERT INTO retos (nombre, puntos, tipo, activo) VALUES (?, ?, ?, ?)", retos)
 
-# Participantes para probar "Adivina Quién"
+# Participantes de ejemplo para Adivina
 participantes = [
     ("Lucía Ramírez", "Resolver conflictos sin drama", "Escalar montañas", "Toco el ukulele en bodas", "Amélie", "Emma Stone", "El aguacate"),
     ("Carlos Méndez", "Memoria fotográfica", "Cocinar ramen", "Me sé todos los diálogos de Shrek", "El Padrino", "Al Pacino", "Friends"),
@@ -88,15 +89,19 @@ cursor.executemany('''
 ''', participantes)
 
 # Tabla de retos grupales posibles
-cursor.execute("""
+cursor.execute('''
 CREATE TABLE IF NOT EXISTS retos_grupales (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nombre TEXT NOT NULL
 )
-""")
+''')
 
-# Tabla de registros de participación
-cursor.execute("""
+# Insertar retos grupales si no existen
+retos_grupales = [('Jenga',), ('Conecta 4',), ('Corn Hole',)]
+cursor.executemany("INSERT INTO retos_grupales (nombre) VALUES (?)", retos_grupales)
+
+# Participación grupal
+cursor.execute('''
 CREATE TABLE IF NOT EXISTS participaciones_grupales (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     reto TEXT,
@@ -106,12 +111,31 @@ CREATE TABLE IF NOT EXISTS participaciones_grupales (
     comentario TEXT,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 )
-""")
+''')
 
-# Insertar retos si no existen
-retos = [('Jenga',), ('Conecta 4',), ('Corn Hole',)]
-cursor.executemany("INSERT INTO retos_grupales (nombre) VALUES (?)", retos)
+# Tabla Reto Foto
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS reto_foto (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    correo TEXT NOT NULL UNIQUE,
+    nombre TEXT NOT NULL,
+    archivo TEXT NOT NULL,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+''')
 
+# Tabla para votos en Reto Foto
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS votos_reto_foto (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    correo_votante TEXT NOT NULL,
+    id_foto INTEGER NOT NULL,
+    puntos INTEGER NOT NULL CHECK(puntos >= 1 AND puntos <= 3),
+    UNIQUE(correo_votante, id_foto)
+)
+''')
+
+# Guardar y cerrar
 conn.commit()
 conn.close()
-print("✅ Base de datos actualizada para reto grupal.")
+print("✅ Todas las tablas fueron creadas o actualizadas correctamente.")
