@@ -61,15 +61,26 @@
 </head>
 <body>
   <h1>📸 Vota en el Reto Foto</h1>
-  <p style="text-align: center;">Tienes 3 puntos en total. Puedes darlos todos a una sola foto o repartirlos.</p>
+  <p style="text-align: center;">
+    Tienes 3 puntos en total. Puedes darlos todos a una sola foto o repartirlos.
+  </p>
+
+  {% if ya_voto %}
+    <p style="text-align: center; color: lightgreen; font-size: 1.1em;">
+      Ya has enviado tu votación. ¡Gracias por participar!
+    </p>
+  {% endif %}
 
   <form method="POST">
     {% for foto in fotos %}
       <div class="foto-card">
         <img src="{{ url_for('static', filename='fotos_reto_foto/' ~ foto.archivo) }}" alt="Foto participante">
         <strong>{{ foto.nombre }}</strong>
-        {% if foto.id in votos %}
-          <div class="voto-realizado">Ya votaste aquí ({{ votos[foto.id] }} pts)</div>
+
+        {% if ya_voto %}
+          {% if foto.id in votos %}
+            <div class="voto-realizado">Ya votaste aquí ({{ votos[foto.id] }} pts)</div>
+          {% endif %}
         {% else %}
           <select name="foto_{{ foto.id }}">
             <option value="">0 puntos</option>
@@ -78,9 +89,13 @@
             <option value="3">3 puntos</option>
           </select>
         {% endif %}
+
       </div>
     {% endfor %}
-    <button type="submit">Enviar Votación</button>
+
+    {% if not ya_voto %}
+      <button type="submit">Enviar Votación</button>
+    {% endif %}
   </form>
 </body>
 </html>

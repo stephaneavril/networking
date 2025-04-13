@@ -10,10 +10,13 @@
       color: white;
       padding: 30px;
     }
-    h2 {
+    h1, h2 {
       color: #ec1c24;
+    }
+    h2 {
       border-bottom: 2px solid #ec1c24;
       padding-bottom: 5px;
+      margin-top: 40px;
     }
     table {
       width: 100%;
@@ -42,11 +45,24 @@
     }
     .activo { color: lightgreen; }
     .inactivo { color: gray; }
+    .seccion {
+      margin-top: 40px;
+    }
   </style>
 </head>
 <body>
 
   <h1>🛠️ Panel de Administración</h1>
+
+  {% with mensajes = get_flashed_messages() %}
+    {% if mensajes %}
+      <div style="background: #1f2140; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+        {% for msg in mensajes %}
+          <p style="color: lightgreen; margin: 0;">{{ msg }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
 
   <!-- Sección 1: Activar/desactivar retos -->
   <h2>🔧 Activar / Desactivar Retos</h2>
@@ -82,22 +98,40 @@
   </table>
 
   <!-- Sección 3: Participaciones Reto Grupal -->
-<h2>📸 Reto Grupal Random - Calificaciones</h2>
-<table>
-  <tr><th>Reto</th><th>Participantes</th><th>Foto</th><th>Calificación</th><th>Comentario</th><th>Acción</th></tr>
-  {% for p in participaciones %}
-  <tr>
-    <form method="POST" action="/calificar/{{ p.id }}">
-      <td>{{ p.reto }}</td>
-      <td>{{ p.nombres_participantes }}</td>
-      <td><a href="/evidencias_reto_grupal/{{ p.archivo }}" target="_blank">Ver Foto</a></td>
-      <td><input type="text" name="calificacion" value="{{ p.calificacion }}"></td>
-      <td><input type="text" name="comentario" value="{{ p.comentario or '' }}"></td>
-      <td><button type="submit">Guardar</button></td>
-    </form>
-  </tr>
-  {% endfor %}
-</table>
+  <h2>📸 Reto Grupal Random - Calificaciones</h2>
+  <table>
+    <tr><th>Reto</th><th>Participantes</th><th>Foto</th><th>Calificación</th><th>Comentario</th><th>Acción</th></tr>
+    {% for p in participaciones %}
+    <tr>
+      <form method="POST" action="/calificar/{{ p.id }}">
+        <td>{{ p.reto }}</td>
+        <td>{{ p.nombres_participantes }}</td>
+        <td>
+          {% if p.archivo %}
+            <a href="/evidencias_reto_grupal/{{ p.archivo }}" target="_blank">Ver Foto</a>
+          {% else %}
+            Sin archivo
+          {% endif %}
+        </td>
+        <td><input type="text" name="calificacion" value="{{ p.calificacion }}"></td>
+        <td><input type="text" name="comentario" value="{{ p.comentario or '' }}"></td>
+        <td><button type="submit">Guardar</button></td>
+      </form>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <!-- Sección 4: Botón reset reto foto -->
+  <h2>🧹 Reto Foto - Reset Total</h2>
+  <form method="POST" action="/reset_reto_foto" onsubmit="return confirm('¿Estás seguro de eliminar todas las fotos y votos del Reto Foto?');">
+    <button type="submit">🔄 Reiniciar Reto Foto</button>
+  </form>
+
+  <!-- Sección 5: Botón reset ranking Adivina Quién -->
+<h2>🧹 Reset Ranking Adivina Quién</h2>
+<form method="POST" action="/reset_adivina" onsubmit="return confirm('¿Estás seguro de eliminar todos los resultados del reto Adivina Quién?');">
+  <button type="submit">🔄 Reiniciar Ranking</button>
+</form>
 
 </body>
 </html>

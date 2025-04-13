@@ -110,6 +110,15 @@ def ranking_adivina():
     conn.close()
     return render_template('ranking_adivina.html', resultados=resultados, mi_resultado=mi_resultado)
 
+@app.route('/reset_adivina_quien', methods=['POST'])
+def reset_adivina_quien():
+    conn = get_db_connection()
+    conn.execute("DELETE FROM adivina_resultados")
+    conn.commit()
+    conn.close()
+    flash("✅ Ranking de Adivina Quién reiniciado correctamente.")
+    return redirect('/admin_panel')
+
 # -------------------- SUBIR EVIDENCIA INDIVIDUAL --------------------
 @app.route('/subir_evidencia', methods=['POST'])
 def subir_evidencia():
@@ -213,32 +222,47 @@ def reto_foto():
 def ver_fotos_reto_foto():
     if 'correo' not in session:
         return redirect('/login')
+
     correo = session['correo']
     conn = get_db_connection()
-    if request.method == 'POST':
+
+    # Verifica si ya votó
+    votos_previos = conn.execute(
+        "SELECT COUNT(*) FROM votos_reto_foto WHERE correo_votante = ?", (correo,)
+    ).fetchone()[0]
+
+    if request.method == 'POST' and votos_previos == 0:
         total_puntos = sum(int(v) for v in request.form.values() if v.isdigit())
         if total_puntos > 3:
             conn.close()
-            return "❌ Solo puedes asignar hasta 3 puntos.", 400
+            return "❌ Solo puedes asignar hasta 3 puntos en total.", 400
+
         for key, val in request.form.items():
             if key.startswith("foto_") and val:
                 id_foto = int(key.split("_")[1])
                 puntos = int(val)
                 try:
-                    conn.execute("INSERT INTO votos_reto_foto (correo_votante, id_foto, puntos) VALUES (?, ?, ?)",
-                                 (correo, id_foto, puntos))
+                    conn.execute(
+                        "INSERT INTO votos_reto_foto (correo_votante, id_foto, puntos) VALUES (?, ?, ?)",
+                        (correo, id_foto, puntos)
+                    )
                 except sqlite3.IntegrityError:
                     continue
         conn.commit()
-        conn.close()
+        flash("✅ ¡Tus votos han sido registrados!")
         return redirect('/ver_fotos_reto_foto')
 
     fotos = conn.execute("SELECT * FROM reto_foto").fetchall()
     votos = conn.execute("SELECT * FROM votos_reto_foto WHERE correo_votante = ?", (correo,)).fetchall()
     votos_dict = {v['id_foto']: v['puntos'] for v in votos}
     conn.close()
-    return render_template("ver_fotos_reto_foto.html", fotos=fotos, votos=votos_dict)
 
+    return render_template(
+        "ver_fotos_reto_foto.html",
+        fotos=fotos,
+        votos=votos_dict,
+        ya_voto=(votos_previos > 0)
+    )
 @app.route('/votar_fotos', methods=['POST'])
 def votar_fotos():
     if 'correo' not in session:
@@ -273,6 +297,25 @@ def ranking_fotos():
     ''').fetchall()
     conn.close()
     return render_template("ranking_fotos.html", ranking=ranking)
+
+@app.route('/reset_reto_foto', methods=['POST'])
+def reset_reto_foto():
+    # 1. Borrar registros de la base de datos
+    conn = get_db_connection()
+    conn.execute("DELETE FROM votos_reto_foto")
+    conn.execute("DELETE FROM reto_foto")
+    conn.commit()
+    conn.close()
+
+    # 2. Borrar archivos de la carpeta
+    carpeta = 'static/fotos_reto_foto'
+    for archivo in os.listdir(carpeta):
+        ruta = os.path.join(carpeta, archivo)
+        if os.path.isfile(ruta):
+            os.remove(ruta)
+
+    flash("✅ Reto Foto reiniciado correctamente.")
+    return redirect('/admin_panel')
 
 # -------------------- RUN --------------------
 if __name__ == '__main__':
