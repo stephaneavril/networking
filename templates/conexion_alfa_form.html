@@ -1,0 +1,7 @@
+<form method="POST">
+  {% for i in range(1, 8) %}
+    <label>Pregunta {{ i }}:</label><br>
+    <input type="text" name="r{{ i }}" required><br><br>
+  {% endfor %}
+  <button type="submit">Enviar</button>
+</form>

@@ -14,6 +14,11 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
+# 🔮 IA: Generar perfil semántico
+def generar_perfil_ia(nombre, respuestas):
+    texto = f"{nombre} es alguien que {respuestas[0]}, le encanta {respuestas[1]}, sueña con {respuestas[2]}, y nunca diría que no a {respuestas[3]}. En su tiempo libre, {respuestas[4]}. Su estilo se define como {respuestas[5]}. Le gustaría {respuestas[6]}."
+    return texto
+
 @app.before_request
 def make_session_permanent():
     session.permanent = True
@@ -316,6 +321,47 @@ def reset_reto_foto():
 
     flash("✅ Reto Foto reiniciado correctamente.")
     return redirect('/admin_panel')
+
+# -------------------- CONEXION ALFA --------------------
+
+@app.route('/conexion_alfa', methods=['GET', 'POST'])
+def conexion_alfa():
+    if 'correo' not in session:
+        return redirect('/login')
+
+    correo = session['correo']
+    nombre = session['jugador']
+    conn = get_db_connection()
+
+    ya_existe = conn.execute("SELECT * FROM conexion_alfa_respuestas WHERE correo = ?", (correo,)).fetchone()
+
+    if request.method == 'POST' and not ya_existe:
+        respuestas = [request.form.get(f'r{i}') for i in range(1, 8)]
+
+        # Aquí simularemos un perfil de IA como placeholder
+        perfil_ia = generar_perfil_ia(nombre, respuestas)
+
+        conn.execute('''
+            INSERT INTO conexion_alfa_respuestas (nombre, correo, r1, r2, r3, r4, r5, r6, r7, perfil_ia)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (nombre, correo, *respuestas, perfil_ia))
+        conn.commit()
+        conn.close()
+        flash("✅ ¡Gracias! Tu perfil ha sido generado.")
+        return redirect('/conexion_alfa_mi_perfil')
+
+    conn.close()
+    return render_template('conexion_alfa_form.html', ya_existe=ya_existe)
+
+@app.route('/conexion_alfa_mi_perfil')
+def conexion_alfa_mi_perfil():
+    if 'correo' not in session:
+        return redirect('/login')
+
+    conn = get_db_connection()
+    perfil = conn.execute("SELECT * FROM conexion_alfa_respuestas WHERE correo = ?", (session['correo'],)).fetchone()
+    conn.close()
+    return render_template("conexion_alfa_perfil.html", perfil=perfil)
 
 # -------------------- RUN --------------------
 if __name__ == '__main__':
