@@ -167,5 +167,17 @@
   <button type="submit">🔄 Reiniciar Ranking QR</button>
 </form>
 
+<form action="/reset_datos_participantes" method="POST" onsubmit="return confirm('¿Seguro que deseas borrar todos los datos de los participantes? Esta acción no se puede deshacer.')">
+  <button type="submit" style="background:#ec1c24; color:white; padding:10px 20px; border:none; border-radius:6px; margin-top:15px;">
+    🔄 Reiniciar Datos de Participantes
+  </button>
+</form>
+
+<form action="/reset_adivina_participantes" method="POST" onsubmit="return confirm('¿Estás seguro de que quieres reiniciar completamente Adivina Quién? Esta acción eliminará todos los participantes.')">
+  <button type="submit" style="background-color:#ec1c24; color:white; border:none; padding:10px 15px; border-radius:6px; cursor:pointer; margin-top: 20px;">
+    🔄 Reiniciar Participantes Adivina Quién
+  </button>
+</form>
+
 </body>
 </html>
