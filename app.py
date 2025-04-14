@@ -538,6 +538,68 @@ def reset_conexion_alfa():
     flash("✅ Conexión Alfa reiniciado correctamente.")
     return redirect('/admin_panel')
 
+@app.route('/generar_matches_conexion_alfa', methods=['POST'])
+def generar_matches_conexion_alfa():
+    conn = get_db_connection()
+    datos = conn.execute("SELECT * FROM conexion_alfa_respuestas").fetchall()
+
+    textos = []
+    correos = []
+    nombres = []
+    perfiles = []
+
+    for row in datos:
+        respuestas = [row[f"r{i}"] for i in range(1, 8)]
+        texto = " ".join(respuestas)
+        textos.append(texto)
+        correos.append(row["correo"])
+        nombres.append(row["nombre"])
+        perfiles.append(row["perfil_ia"])
+
+    vectores = vectorizer_ia.transform(textos)
+    sim_matrix = cosine_similarity(vectores)
+
+    # Evitar duplicados
+    ya_guardados = conn.execute("SELECT correo_1, correo_2 FROM conexion_alfa_matches").fetchall()
+    ya_guardados_set = set((min(r["correo_1"], r["correo_2"]), max(r["correo_1"], r["correo_2"])) for r in ya_guardados)
+
+    nuevos_matches = 0
+
+    for i in range(len(correos)):
+        for j in range(i + 1, len(correos)):
+            correo1, correo2 = correos[i], correos[j]
+            nombre1, nombre2 = nombres[i], nombres[j]
+            perfil1, perfil2 = perfiles[i], perfiles[j]
+            pareja = (min(correo1, correo2), max(correo1, correo2))
+
+            if pareja not in ya_guardados_set:
+                conn.execute('''
+                    INSERT INTO conexion_alfa_matches (correo_1, correo_2, nombre_1, nombre_2, perfil_1, perfil_2)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (correo1, correo2, nombre1, nombre2, perfil1, perfil2))
+                nuevos_matches += 1
+
+    conn.commit()
+
+    # Métricas
+    feedbacks = conn.execute("SELECT feedback FROM conexion_alfa_matches WHERE feedback IS NOT NULL").fetchall()
+    total = len(feedbacks)
+    positivos = sum(f["feedback"] == 1 for f in feedbacks)
+    negativos = sum(f["feedback"] == 0 for f in feedbacks)
+
+    if total > 0:
+        accuracy = round(positivos / total, 2)
+        precision = round(positivos / (positivos + negativos), 2) if (positivos + negativos) > 0 else 0
+        recall = round(positivos / total, 2)
+        f1 = round(2 * (precision * recall) / (precision + recall), 2) if (precision + recall) > 0 else 0
+    else:
+        accuracy = precision = recall = f1 = None
+
+    conn.close()
+
+    flash(f"✅ {nuevos_matches} matches generados con IA. Métricas: Accuracy={accuracy}, Precision={precision}, Recall={recall}, F1={f1}")
+    return redirect('/admin_panel')
+
 # -------------------- RUN --------------------
 if __name__ == '__main__':
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
