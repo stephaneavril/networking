@@ -148,27 +148,27 @@ def adivina_finalizado():
     fallos = data.get("fallos", 0)
     puntaje = data.get("puntaje", 0)
 
-    if not isinstance(aciertos, int) or not isinstance(puntaje, int):
+    if not isinstance(aciertos, int):
         return jsonify({"error": "Datos inválidos"}), 400
+
+    total_final = puntaje
 
     conn = get_db_connection()
     cursor = conn.cursor()
-
     cursor.execute("SELECT * FROM adivina_resultados WHERE nombre_jugador = ?", (jugador,))
     if cursor.fetchone():
         conn.close()
         return jsonify({"error": "Ya has completado el reto"}), 400
 
     cursor.execute("INSERT INTO adivina_resultados (nombre_jugador, aciertos, puntos_extra) VALUES (?, ?, ?)",
-                   (jugador, aciertos, puntaje))
+                   (jugador, aciertos, total_final))
     conn.commit()
     conn.close()
 
     return jsonify({
-        "message": f"🎉 ¡Reto completado! {jugador} obtuvo {puntaje} puntos ({aciertos} aciertos, {fallos} errores).",
+        "message": f"🎉 ¡Reto completado! {jugador} ganó {total_final} puntos ({aciertos} aciertos, {fallos} errores).",
         "redirect": "/ranking_adivina"
     })
-
 
 @app.route('/ranking_adivina')
 def ranking_adivina():
