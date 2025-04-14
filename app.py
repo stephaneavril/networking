@@ -693,6 +693,20 @@ def reset_datos_participantes():
     flash("✅ Datos de participantes reiniciados. Todos podrán volver a llenar el formulario.")
     return redirect('/admin_panel')
 
+@app.route('/eliminar_todos_los_jugadores', methods=['POST'])
+def eliminar_todos_los_jugadores():
+    conn = get_db_connection()
+    # Borrar jugadores y respuestas relacionadas
+    conn.execute("DELETE FROM jugadores")
+    conn.execute("DELETE FROM conexion_alfa_respuestas")
+    conn.execute("DELETE FROM adivina_participantes")
+    conn.execute("DELETE FROM adivina_resultados")
+    conn.execute("DELETE FROM conexion_alfa_matches")
+    conn.commit()
+    conn.close()
+    flash("🧹 Todos los jugadores y sus datos han sido eliminados.")
+    return redirect('/admin_panel')
+
 # -------------------- RUN --------------------
 if __name__ == '__main__':
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
