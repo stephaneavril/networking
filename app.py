@@ -240,13 +240,28 @@ def generar_contenido_adivina():
 @app.route('/respuestas_curiosas')
 def respuestas_curiosas():
     conn = get_db_connection()
-    datos = conn.execute("SELECT * FROM adivina_participantes").fetchall()
+    respuestas = conn.execute('SELECT * FROM adivina_participantes').fetchall()
     conn.close()
 
-    # Elegimos aleatoriamente 10 respuestas distintas
-    import random
-    curiosidades = random.sample(datos, min(len(datos), 10))
-    return render_template('respuestas_curiosas.html', curiosidades=curiosidades)
+    destacados = []
+    for r in respuestas:
+        frases = [
+            f"🎯 Superpoder: {r['superpoder']}",
+            f"🎶 Pasión: {r['pasion']}",
+            f"🧠 Dato curioso: {r['dato_curioso']}",
+            f"🎬 Película favorita: {r['pelicula_favorita']}",
+            f"🎤 Concierto: {r['mejor_concierto']}",
+            f"📖 Libro favorito: {r['mejor_libro']}",
+            f"👕 Prenda imprescindible: {r['prenda_imprescindible']}",
+            f"🤢 No soporta: {r['no_soporto']}"
+        ]
+        seleccionadas = random.sample(frases, 3)
+        destacados.append({
+            "nombre": r["nombre_completo"],
+            "frases": seleccionadas
+        })
+
+    return render_template("respuestas_curiosas.html", destacados=destacados)
 
 # -------------------- SUBIR EVIDENCIA INDIVIDUAL --------------------
 @app.route('/subir_evidencia', methods=['POST'])
