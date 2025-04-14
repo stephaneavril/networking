@@ -122,7 +122,24 @@
       <h3>Ranking Adivina Quién</h3>
     </div>
   </div>
-  
+  <div class="card" style="margin-top: 30px;">
+    <div class="badge">📲</div>
+    <h3>Ranking Escaneo QR</h3>
+    {% if ranking_qr %}
+      <table style="width:100%; margin-top: 15px; color: white;">
+        <tr><th style="text-align:left;">Nombre</th><th style="text-align:right;">Puntos</th></tr>
+        {% for r in ranking_qr %}
+        <tr>
+          <td>{{ r['nombre'] }}</td>
+          <td style="text-align:right;">{{ r['total'] }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    {% else %}
+      <p style="margin-top:10px;">Aún no hay registros.</p>
+    {% endif %}
+  </div>
+
 </div>
 
 <footer>

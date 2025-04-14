@@ -50,18 +50,75 @@ def login():
             cursor.execute("INSERT INTO jugadores (nombre, correo) VALUES (?, ?)", (nombre, correo))
             conn.commit()
         conn.close()
-        return redirect('/')
+        return redirect('/preguntas_post_login')
     return render_template('login.html')
+
+@app.route('/preguntas_post_login', methods=['GET', 'POST'])
+def preguntas_post_login():
+    if 'correo' not in session:
+        return redirect('/login')
+
+    correo = session['correo']
+    nombre = session['jugador']
+    conn = get_db_connection()
+
+    ya_respondio = conn.execute("SELECT * FROM conexion_alfa_respuestas WHERE correo = ?", (correo,)).fetchone()
+
+    if request.method == 'POST' and not ya_respondio:
+        respuestas = [request.form.get(f'r{i}') for i in range(1, 8)]
+        perfil_ia = generar_perfil_ia(nombre, respuestas)
+
+        # Guardar en conexion_alfa_respuestas
+        conn.execute('''
+            INSERT INTO conexion_alfa_respuestas (nombre, correo, r1, r2, r3, r4, r5, r6, r7, perfil_ia)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (nombre, correo, *respuestas, perfil_ia))
+
+        # Guardar en adivina_participantes (puedes ajustar qué respuesta mostrar)
+        conn.execute('''
+            INSERT INTO adivina_participantes (nombre, respuesta)
+            VALUES (?, ?)
+        ''', (nombre, respuestas[0]))  # Usamos r1 como respuesta para el reto
+
+        conn.commit()
+        conn.close()
+        flash("✅ ¡Gracias! Tu información ha sido registrada.")
+        return redirect('/conexion_alfa_mi_perfil')
+
+    conn.close()
+    return render_template('preguntas_post_login.html', ya_respondio=ya_respondio)
 
 # -------------------- HOME --------------------
 @app.route('/')
 def index():
     if 'jugador' not in session:
         return redirect('/login')
+
     conn = get_db_connection()
     retos = conn.execute("SELECT * FROM retos WHERE activo = 1").fetchall()
     conn.close()
-    return render_template('index.html', retos=retos)
+
+    # Conexión a la base de datos del sistema QR
+    qr_conn = sqlite3.connect('scan_points.db')
+    qr_conn.row_factory = sqlite3.Row
+    ranking_qr = qr_conn.execute('''
+        SELECT nombre, SUM(puntos) AS total
+        FROM registros
+        GROUP BY nombre
+        ORDER BY total DESC
+    ''').fetchall()
+    qr_conn.close()
+
+    return render_template('index.html', retos=retos, ranking_qr=ranking_qr)
+
+@app.route('/reset_ranking_qr', methods=['POST'])
+def reset_ranking_qr():
+    conn_qr = sqlite3.connect('scan_points.db')
+    conn_qr.execute("DELETE FROM registros")
+    conn_qr.commit()
+    conn_qr.close()
+    flash("✅ Ranking de Escaneo QR reiniciado correctamente.")
+    return redirect('/admin_panel')
 
 # -------------------- RETO ADIVINA --------------------
 @app.route('/adivina')
