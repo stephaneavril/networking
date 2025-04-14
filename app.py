@@ -696,16 +696,16 @@ def reset_datos_participantes():
 @app.route('/eliminar_todos_los_jugadores', methods=['POST'])
 def eliminar_todos_los_jugadores():
     conn = get_db_connection()
-    # Borrar jugadores y respuestas relacionadas
     conn.execute("DELETE FROM jugadores")
     conn.execute("DELETE FROM conexion_alfa_respuestas")
+    conn.execute("DELETE FROM adivina_resultados")  # << incluye esto
     conn.execute("DELETE FROM adivina_participantes")
-    conn.execute("DELETE FROM adivina_resultados")
     conn.execute("DELETE FROM conexion_alfa_matches")
     conn.commit()
     conn.close()
-    flash("🧹 Todos los jugadores y sus datos han sido eliminados.")
-    return redirect('/admin_panel')
+    session.clear()  # << esto es clave para cerrar la sesión del usuario
+    flash("🧹 Todos los jugadores, respuestas y sesiones fueron eliminados.")
+    return redirect('/login')
 
 # -------------------- RUN --------------------
 if __name__ == '__main__':
