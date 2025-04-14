@@ -184,20 +184,6 @@ def ranking_adivina():
     conn.close()
     return render_template('ranking_adivina.html', resultados=resultados, mi_resultado=mi_resultado)
 
-@app.route('/ranking_adivina')
-def ranking_adivina():
-    if 'jugador' not in session:
-        return redirect('/login')
-    conn = get_db_connection()
-    resultados = conn.execute('''
-        SELECT nombre_jugador, aciertos, puntos_extra, timestamp
-        FROM adivina_resultados
-        ORDER BY puntos_extra DESC, timestamp ASC
-    ''').fetchall()
-    mi_resultado = conn.execute("SELECT * FROM adivina_resultados WHERE nombre_jugador = ?", (session['jugador'],)).fetchone()
-    conn.close()
-    return render_template('ranking_adivina.html', resultados=resultados, mi_resultado=mi_resultado)
-
 @app.route('/reset_adivina_quien', methods=['POST'])
 def reset_adivina_quien():
     conn = get_db_connection()
