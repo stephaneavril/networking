@@ -1,3 +1,4 @@
+<!-- templates/respuestas_curiosas.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -28,16 +29,14 @@
 </head>
 <body>
   <h1>💬 Respuestas Curiosas de Participantes</h1>
-  {% for p in curiosidades %}
+  {% for p in destacados %}
     <div class="carta">
-      <p><strong>Nombre:</strong> {{ p['nombre_completo'] }}</p>
-      <p><strong>Superpoder:</strong> {{ p['superpoder'] }}</p>
-      <p><strong>Pasion:</strong> {{ p['pasion'] }}</p>
-      <p><strong>Dato curioso:</strong> {{ p['dato_curioso'] }}</p>
-      <p><strong>No soporta:</strong> {{ p['no_soporto'] }}</p>
-      <p><strong>Pelicula:</strong> {{ p['pelicula_favorita'] }}</p>
-      <p><strong>Libro:</strong> {{ p['mejor_libro'] }}</p>
-      <p><strong>Concierto:</strong> {{ p['mejor_concierto'] }}</p>
+      <p><strong>{{ p.nombre }}</strong></p>
+      <ul>
+        {% for frase in p.frases %}
+          <li>{{ frase }}</li>
+        {% endfor %}
+      </ul>
     </div>
   {% endfor %}
 </body>
