@@ -85,7 +85,7 @@
       {% endfor %}
     </div>
   {% endif %}
-{% endwith %}
+  {% endwith %}
 
   <p style="text-align: center; font-size: 1.1em;">
     ¡Hola {{ session['jugador'] }}! Selecciona un reto para comenzar:
@@ -107,7 +107,7 @@
         <div class="badge">
           {% if reto.nombre == 'Ver fotos y votar' %}
             🗳
-            {% elif reto.nombre == 'Ranking Fotos' %}
+          {% elif reto.nombre == 'Ranking Fotos' %}
             🏆
           {% else %}
             +{{ reto.puntos }}
@@ -116,29 +116,20 @@
         <h3>{{ reto.nombre }}</h3>
       </div>
     {% endfor %}
-  
+
     <div class="card" onclick="location.href='{{ url_for('ranking_adivina') }}'">
       <div class="badge">👑</div>
       <h3>Ranking Adivina Quién</h3>
     </div>
   </div>
-  <div class="card" style="margin-top: 30px;">
-    <div class="badge">📲</div>
-    <h3>Ranking Escaneo QR</h3>
-    {% if ranking_qr %}
-      <table style="width:100%; margin-top: 15px; color: white;">
-        <tr><th style="text-align:left;">Nombre</th><th style="text-align:right;">Puntos</th></tr>
-        {% for r in ranking_qr %}
-        <tr>
-          <td>{{ r['nombre'] }}</td>
-          <td style="text-align:right;">{{ r['total'] }}</td>
-        </tr>
-        {% endfor %}
-      </table>
-    {% else %}
-      <p style="margin-top:10px;">Aún no hay registros.</p>
-    {% endif %}
-  </div>
+
+  <a href="https://sistema-qr-puntos.onrender.com/ranking_general" target="_blank" style="text-decoration: none; color: inherit;">
+    <div class="card" style="margin-top: 30px;">
+      <div class="badge">📲</div>
+      <h3>Ranking Escaneo QR</h3>
+      <p style="margin-top:10px;">Haz clic para ver el ranking en tiempo real</p>
+    </div>
+  </a>
 
 </div>
 

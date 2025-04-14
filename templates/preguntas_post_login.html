@@ -46,6 +46,10 @@
       margin: auto;
       margin-top: 20px;
     }
+    a {
+      color: #ffb;
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
@@ -53,7 +57,7 @@
   <div class="form-box">
     {% if ya_respondio %}
       <h1>✅ Ya respondiste estas preguntas</h1>
-      <p>Puedes ver tu perfil <a href="/conexion_alfa_mi_perfil" style="color:#ffb;">aquí</a>.</p>
+      <p>Puedes ver tu perfil <a href="/conexion_alfa_mi_perfil">aquí</a>.</p>
     {% else %}
       <h1>🧠 Conócete Mejor</h1>
       <form method="POST">

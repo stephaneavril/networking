@@ -65,20 +65,30 @@ def preguntas_post_login():
     ya_respondio = conn.execute("SELECT * FROM conexion_alfa_respuestas WHERE correo = ?", (correo,)).fetchone()
 
     if request.method == 'POST' and not ya_respondio:
-        respuestas = [request.form.get(f'r{i}') for i in range(1, 8)]
+        respuestas = [request.form.get(f'r{i}') for i in range(1, 9)]  # r1 a r8
         perfil_ia = generar_perfil_ia(nombre, respuestas)
 
-        # Guardar en conexion_alfa_respuestas
+        # Guardar en conexion_alfa_respuestas (IA)
         conn.execute('''
-            INSERT INTO conexion_alfa_respuestas (nombre, correo, r1, r2, r3, r4, r5, r6, r7, perfil_ia)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO conexion_alfa_respuestas 
+            (nombre, correo, r1, r2, r3, r4, r5, r6, r7, r8, perfil_ia)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (nombre, correo, *respuestas, perfil_ia))
 
-        # Guardar en adivina_participantes (puedes ajustar qué respuesta mostrar)
+        # Guardar en adivina_participantes
         conn.execute('''
-            INSERT INTO adivina_participantes (nombre, respuesta)
-            VALUES (?, ?)
-        ''', (nombre, respuestas[0]))  # Usamos r1 como respuesta para el reto
+            INSERT INTO adivina_participantes 
+            (nombre_completo, superpoder, pasion, dato_curioso, pelicula_favorita, actor_favorito, no_soporto)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            nombre,
+            respuestas[0],  # superpoder
+            respuestas[1],  # pasion
+            respuestas[2],  # dato curioso
+            respuestas[3],  # pelicula favorita
+            respuestas[4],  # actor favorito
+            respuestas[5]   # no soporto
+        ))
 
         conn.commit()
         conn.close()
@@ -189,6 +199,15 @@ def reset_adivina_quien():
     conn.commit()
     conn.close()
     flash("✅ Ranking de Adivina Quién reiniciado correctamente.")
+    return redirect('/admin_panel')
+
+@app.route('/reset_adivina_participantes', methods=['POST'])
+def reset_adivina_participantes():
+    conn = get_db_connection()
+    conn.execute("DELETE FROM adivina_participantes")
+    conn.commit()
+    conn.close()
+    flash("✅ Participantes de Adivina Quién reiniciados correctamente.")
     return redirect('/admin_panel')
 
 # -------------------- SUBIR EVIDENCIA INDIVIDUAL --------------------
@@ -662,6 +681,16 @@ def forzar_matches_conexion_alfa():
     import subprocess
     subprocess.call(["python", "generar_matches_conexion_alfa.py"])
     flash("✅ Matches de Conexión Alfa generados correctamente.")
+    return redirect('/admin_panel')
+
+@app.route('/reset_datos_participantes', methods=['POST'])
+def reset_datos_participantes():
+    conn = get_db_connection()
+    conn.execute("DELETE FROM conexion_alfa_respuestas")
+    conn.execute("DELETE FROM adivina_participantes")
+    conn.commit()
+    conn.close()
+    flash("✅ Datos de participantes reiniciados. Todos podrán volver a llenar el formulario.")
     return redirect('/admin_panel')
 
 # -------------------- RUN --------------------
