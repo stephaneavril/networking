@@ -698,14 +698,14 @@ def eliminar_todos_los_jugadores():
     conn = get_db_connection()
     conn.execute("DELETE FROM jugadores")
     conn.execute("DELETE FROM conexion_alfa_respuestas")
-    conn.execute("DELETE FROM adivina_resultados")  # << incluye esto
-    conn.execute("DELETE FROM adivina_participantes")
     conn.execute("DELETE FROM conexion_alfa_matches")
+    conn.execute("DELETE FROM adivina_resultados")
+    conn.execute("DELETE FROM adivina_participantes")
     conn.commit()
     conn.close()
-    session.clear()  # << esto es clave para cerrar la sesión del usuario
-    flash("🧹 Todos los jugadores, respuestas y sesiones fueron eliminados.")
-    return redirect('/login')
+    session.clear()  # Limpiar sesión activa
+    flash("✅ Se eliminaron todos los jugadores, respuestas y sesiones.")
+    return redirect('/admin_panel')
 
 # -------------------- RUN --------------------
 if __name__ == '__main__':
