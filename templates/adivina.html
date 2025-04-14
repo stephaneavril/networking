@@ -18,7 +18,7 @@
       padding: 20px;
       margin: 30px auto;
       border-radius: 12px;
-      max-width: 700px;
+      max-width: 500px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     }
 
@@ -46,6 +46,11 @@
       margin-top: 20px;
       font-weight: bold;
     }
+
+    #puntaje {
+      margin-top: 10px;
+      color: lightgreen;
+    }
   </style>
 </head>
 <body>
@@ -64,6 +69,7 @@
     <br>
     <button onclick="verificar()">Responder</button>
     <div id="resultado"></div>
+    <div id="puntaje">Puntaje: 0</div>
   </div>
 
   <script>
@@ -71,14 +77,15 @@
     let indices_restantes = participantes.map((_, i) => i);
     let actual;
     let aciertos = 0;
+    let puntaje = 0;
 
     function mostrarFrase() {
       if (indices_restantes.length === 0) {
         fetch('/adivina_finalizado', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ aciertos })
-        })
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ aciertos, puntaje })
+})
         .then(res => res.json())
         .then(data => {
           alert(data.message || data.error);
@@ -96,12 +103,12 @@
         <p><strong>Superpoder:</strong> ${actual.superpoder}</p>
         <p><strong>Pasión:</strong> ${actual.pasion}</p>
         <p><strong>Dato curioso:</strong> ${actual.dato_curioso}</p>
-        <p><strong>Película favorita:</strong> ${actual.pelicula_favorita}</p>
-        <p><strong>Actor o actriz favorito/a:</strong> ${actual.actor_favorito}</p>
-        <p><strong>No soporta:</strong> ${actual.no_soporto}</p>
-        <p><strong>Mejor libro:</strong> ${actual.mejor_libro}</p>
-        <p><strong>Prenda imprescindible:</strong> ${actual.prenda_imprescindible}</p>
+        <p><strong>Pelicula favorita:</strong> ${actual.pelicula_favorita}</p>
+        <p><strong>Actor favorito:</strong> ${actual.actor_favorito}</p>
         <p><strong>Mejor concierto:</strong> ${actual.mejor_concierto}</p>
+        <p><strong>Prenda imprescindible:</strong> ${actual.prenda_imprescindible}</p>
+        <p><strong>Mejor libro:</strong> ${actual.mejor_libro}</p>
+        <p><strong>No soporta:</strong> ${actual.no_soporto}</p>
       `;
 
       document.getElementById("contenido").innerHTML = pistas;
@@ -116,10 +123,14 @@
       if (seleccion === correcto) {
         document.getElementById("resultado").innerText = "✅ ¡Correcto!";
         aciertos++;
+        puntaje += 10;
         setTimeout(mostrarFrase, 1000);
       } else {
-        document.getElementById("resultado").innerText = "❌ Intenta con otro nombre";
+        document.getElementById("resultado").innerText = "❌ Incorrecto, intenta con otro nombre.";
+        puntaje -= 10;
       }
+
+      document.getElementById("puntaje").innerText = `Puntaje: ${puntaje}`;
     }
 
     mostrarFrase();
