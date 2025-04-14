@@ -65,32 +65,24 @@ def preguntas_post_login():
     ya_respondio = conn.execute("SELECT * FROM conexion_alfa_respuestas WHERE correo = ?", (correo,)).fetchone()
 
     if request.method == 'POST' and not ya_respondio:
-        # r1 a r6 = Adivina Quién + IA
-        # r8, r9, r10, r11 = nuevas preguntas IA
-        respuestas = [request.form.get(f'r{i}') for i in range(1, 7)] + \
-                     [request.form.get(f'r{i}') for i in [8, 9, 10, 11]]
-
+        respuestas = [request.form.get(f'r{i}') for i in range(1, 13)]  # r1 a r12
         perfil_ia = generar_perfil_ia(nombre, respuestas)
 
-        # Guardar en conexion_alfa_respuestas (IA)
         conn.execute('''
             INSERT INTO conexion_alfa_respuestas 
-            (nombre, correo, r1, r2, r3, r4, r5, r6, r8, r9, r10, r11, r13)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (nombre, correo, *respuestas, ""))
+            (nombre, correo, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, perfil_ia)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (nombre, correo, *respuestas, perfil_ia))
 
-        # Guardar en adivina_participantes
         conn.execute('''
             INSERT INTO adivina_participantes 
-            (nombre_completo, superpoder, pasion, dato_curioso, actor_favorito, no_soporto)
-            VALUES (?, ?, ?, ?, ?, ?)
+            (nombre_completo, superpoder, pasion, dato_curioso, pelicula_favorita, actor_favorito, no_soporto,
+             mejor_libro, prenda_imprescindible, mejor_concierto)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             nombre,
-            respuestas[0],  # r1: superpoder
-            respuestas[1],  # r2: pasion
-            respuestas[2],  # r3: dato curioso
-            respuestas[4],  # r5: actor favorito
-            respuestas[5]   # r6: no soporto
+            respuestas[0], respuestas[1], respuestas[2], respuestas[3], respuestas[4],
+            respuestas[5], respuestas[6], respuestas[7], respuestas[8]
         ))
 
         conn.commit()
@@ -211,6 +203,37 @@ def reset_adivina_participantes():
     conn.commit()
     conn.close()
     flash("✅ Participantes de Adivina Quién reiniciados correctamente.")
+    return redirect('/admin_panel')
+
+@app.route('/generar_contenido_adivina', methods=['POST'])
+def generar_contenido_adivina():
+    try:
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        participantes = conn.execute('SELECT * FROM adivina_participantes').fetchall()
+        conn.close()
+
+        datos = []
+        for p in participantes:
+            datos.append({
+                "nombre_completo": p["nombre_completo"],
+                "superpoder": p["superpoder"],
+                "pasion": p["pasion"],
+                "dato_curioso": p["dato_curioso"],
+                "pelicula_favorita": p["pelicula_favorita"],
+                "actor_favorito": p["actor_favorito"],
+                "no_soporto": p["no_soporto"],
+                "mejor_libro": p["mejor_libro"],
+                "prenda_imprescindible": p["prenda_imprescindible"],
+                "mejor_concierto": p["mejor_concierto"]
+            })
+
+        with open('contenido_adivina.json', 'w', encoding='utf-8') as f:
+            json.dump(datos, f, indent=2, ensure_ascii=False)
+
+        flash(f"✅ Se generó el contenido de Adivina Quién con {len(datos)} participantes.")
+    except Exception as e:
+        flash(f"❌ Error generando contenido: {e}")
     return redirect('/admin_panel')
 
 # -------------------- SUBIR EVIDENCIA INDIVIDUAL --------------------

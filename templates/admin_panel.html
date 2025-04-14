@@ -52,137 +52,125 @@
 </head>
 <body>
 
-  <h1>🛠️ Panel de Administración</h1>
+  <!-- SECCIÓN 1: Título y mensajes -->
+<h1>🛠️ Panel de Administración</h1>
 
-  {% with mensajes = get_flashed_messages() %}
-    {% if mensajes %}
-      <div style="background: #1f2140; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-        {% for msg in mensajes %}
-          <p style="color: lightgreen; margin: 0;">{{ msg }}</p>
-        {% endfor %}
-      </div>
-    {% endif %}
-  {% endwith %}
+{% with mensajes = get_flashed_messages() %}
+  {% if mensajes %}
+    <div style="background: #1f2140; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+      {% for msg in mensajes %}
+        <p style="color: lightgreen; margin: 0;">{{ msg }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
 
-  <!-- Sección 1: Activar/desactivar retos -->
-  <h2>🔧 Activar / Desactivar Retos</h2>
-  <table>
-    <tr><th>Nombre</th><th>Estado</th><th>Acción</th></tr>
-    {% for reto in retos %}
-    <tr>
-      <td>{{ reto.nombre }}</td>
-      <td class="{{ 'activo' if reto.activo else 'inactivo' }}">{{ 'Activo' if reto.activo else 'Inactivo' }}</td>
+<!-- SECCIÓN 2: Activar / Desactivar Retos -->
+<h2>🔧 Activar / Desactivar Retos</h2>
+<table>
+  <tr><th>Nombre</th><th>Estado</th><th>Acción</th></tr>
+  {% for reto in retos %}
+  <tr>
+    <td>{{ reto.nombre }}</td>
+    <td class="{{ 'activo' if reto.activo else 'inactivo' }}">{{ 'Activo' if reto.activo else 'Inactivo' }}</td>
+    <td>
+      <form method="POST" action="/admin_panel" style="display:inline;">
+        <input type="hidden" name="reto_id" value="{{ reto.id }}">
+        <input type="hidden" name="activo" value="{{ 0 if reto.activo else 1 }}">
+        <button type="submit">{{ 'Desactivar' if reto.activo else 'Activar' }}</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+
+<!-- SECCIÓN 3: Ranking Adivina Quién -->
+<h2>🏆 Ranking Adivina Quién</h2>
+<table>
+  <tr><th>Nombre</th><th>Aciertos</th><th>Bonus</th><th>Total</th></tr>
+  {% for r in resultados %}
+  <tr>
+    <td>{{ r['nombre_jugador'] }}</td>
+    <td>{{ r['aciertos'] }}</td>
+    <td>{{ r['puntos_extra'] - r['aciertos'] * 3 }}</td>
+    <td>{{ r['puntos_extra'] }}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+<!-- SECCIÓN 4: Reto Grupal -->
+<h2>📸 Reto Grupal Random - Calificaciones</h2>
+<table>
+  <tr><th>Reto</th><th>Participantes</th><th>Foto</th><th>Calificación</th><th>Comentario</th><th>Acción</th></tr>
+  {% for p in participaciones %}
+  <tr>
+    <form method="POST" action="/calificar/{{ p.id }}">
+      <td>{{ p.reto }}</td>
+      <td>{{ p.nombres_participantes }}</td>
       <td>
-        <form method="POST" action="/admin_panel" style="display:inline;">
-          <input type="hidden" name="reto_id" value="{{ reto.id }}">
-          <input type="hidden" name="activo" value="{{ 0 if reto.activo else 1 }}">
-          <button type="submit">{{ 'Desactivar' if reto.activo else 'Activar' }}</button>
-        </form>
+        {% if p.archivo %}
+          <a href="/evidencias_reto_grupal/{{ p.archivo }}" target="_blank">Ver Foto</a>
+        {% endif %}
+      </td>
+      <td><input type="text" name="calificacion" value="{{ p.calificacion }}"></td>
+      <td><input type="text" name="comentario" value="{{ p.comentario or '' }}"></td>
+      <td><button type="submit">Guardar</button></td>
+    </form>
+  </tr>
+  {% endfor %}
+</table>
+
+<!-- SECCIÓN 5: Reset botones -->
+<h2>🧹 Resets por módulo</h2>
+<form method="POST" action="/reset_adivina" onsubmit="return confirm('¿Eliminar ranking Adivina Quién?');">
+  <button type="submit">🔄 Reset Ranking Adivina Quién</button>
+</form>
+<form method="POST" action="/reset_adivina_participantes" onsubmit="return confirm('¿Eliminar participantes Adivina Quién?');">
+  <button type="submit">🔄 Reset Participantes Adivina</button>
+</form>
+<form method="POST" action="/reset_reto_foto" onsubmit="return confirm('¿Eliminar fotos y votos del reto foto?');">
+  <button type="submit">🖼️ Reset Reto Foto</button>
+</form>
+<form method="POST" action="/reset_ranking_qr" onsubmit="return confirm('¿Eliminar ranking de escaneo QR?');">
+  <button type="submit">📲 Reset Ranking QR</button>
+</form>
+<form method="POST" action="/reset_conexion_alfa" onsubmit="return confirm('¿Eliminar datos de Conexión Alfa?');">
+  <button type="submit">🔄 Reset Conexión Alfa</button>
+</form>
+<form method="POST" action="/reset_datos_participantes" onsubmit="return confirm('¿Eliminar respuestas de los participantes?');">
+  <button type="submit">🧹 Reset Respuestas Participantes</button>
+</form>
+<form method="POST" action="/eliminar_todos_los_jugadores" onsubmit="return confirm('¿Eliminar jugadores y toda la data?');">
+  <button type="submit" style="background: darkred;">🧨 Eliminar TODOS los jugadores</button>
+</form>
+
+<!-- SECCIÓN 6: Adivina Quién Generar Contenido -->
+<h2>🧠 Generar Contenido Juego Adivina Quién</h2>
+<form method="POST" action="/generar_contenido_adivina" onsubmit="return confirm('¿Regenerar contenido de Adivina Quién?');">
+  <button type="submit">📄 Generar contenido</button>
+</form>
+
+<!-- SECCIÓN 7: Conexión Alfa -->
+<h2>🎥 Evidencias Conexión Alfa</h2>
+<table>
+  <tr><th>Pareja</th><th>Video</th></tr>
+  {% for m in matches_conexion %}
+    <tr>
+      <td>{{ m.nombre_1 }} 🤝 {{ m.nombre_2 }}</td>
+      <td>
+        {% if m.evidencia %}
+          <a href="{{ url_for('static', filename='evidencias_alfa/' ~ m.evidencia) }}" target="_blank">Ver Video</a>
+        {% else %}
+          Sin video
+        {% endif %}
       </td>
     </tr>
-    {% endfor %}
-  </table>
+  {% endfor %}
+</table>
 
-  <!-- Sección 2: Ranking Adivina Quién -->
-  <h2>🏆 Ranking Adivina Quién</h2>
-  <table>
-    <tr><th>Nombre</th><th>Aciertos</th><th>Bonus</th><th>Total</th></tr>
-    {% for r in resultados %}
-    <tr>
-      <td>{{ r['nombre_jugador'] }}</td>
-      <td>{{ r['aciertos'] }}</td>
-      <td>{{ r['puntos_extra'] - r['aciertos'] * 3 }}</td>
-      <td>{{ r['puntos_extra'] }}</td>
-    </tr>
-    {% endfor %}
-  </table>
-
-  <!-- Sección 3: Participaciones Reto Grupal -->
-  <h2>📸 Reto Grupal Random - Calificaciones</h2>
-  <table>
-    <tr><th>Reto</th><th>Participantes</th><th>Foto</th><th>Calificación</th><th>Comentario</th><th>Acción</th></tr>
-    {% for p in participaciones %}
-    <tr>
-      <form method="POST" action="/calificar/{{ p.id }}">
-        <td>{{ p.reto }}</td>
-        <td>{{ p.nombres_participantes }}</td>
-        <td>
-          {% if p.archivo %}
-            <a href="/evidencias_reto_grupal/{{ p.archivo }}" target="_blank">Ver Foto</a>
-          {% endif %}
-        </td>
-        <td><input type="text" name="calificacion" value="{{ p.calificacion }}"></td>
-        <td><input type="text" name="comentario" value="{{ p.comentario or '' }}"></td>
-        <td><button type="submit">Guardar</button></td>
-      </form>
-    </tr>
-    {% endfor %}
-  </table>
-
-  <!-- Sección 4: Botón reset reto foto -->
-  <h2>🧹 Reto Foto - Reset Total</h2>
-  <form method="POST" action="/reset_reto_foto" onsubmit="return confirm('¿Estás seguro de eliminar todas las fotos y votos del Reto Foto?');">
-    <button type="submit">🔄 Reiniciar Reto Foto</button>
-  </form>
-
-  <!-- Sección 5: Botón reset ranking Adivina Quién -->
-  <h2>🧹 Reset Ranking Adivina Quién</h2>
-  <form method="POST" action="/reset_adivina" onsubmit="return confirm('¿Estás seguro de eliminar todos los resultados del reto Adivina Quién?');">
-    <button type="submit">🔄 Reiniciar Ranking</button>
-  </form>
-
-  <!-- Sección 6: Videos Conexión Alfa -->
-  <h2>🎥 Evidencias Conexión Alfa</h2>
-  <table>
-    <tr><th>Pareja</th><th>Video</th></tr>
-    {% for m in matches_conexion %}
-      <tr>
-        <td>{{ m.nombre_1 }} 🤝 {{ m.nombre_2 }}</td>
-        <td>
-          {% if m.evidencia %}
-            <a href="{{ url_for('static', filename='evidencias_alfa/' ~ m.evidencia) }}" target="_blank">Ver Video</a>
-          {% else %}
-            Sin video
-          {% endif %}
-        </td>
-      </tr>
-    {% endfor %}
-  </table>
-
-  <!-- Sección 7: Reset Conexión Alfa -->
-  <h2>🧹 Reset Conexión Alfa</h2>
-  <form method="POST" action="/reset_conexion_alfa" onsubmit="return confirm('¿Eliminar todos los datos de Conexión Alfa? Esto incluye respuestas, matches y videos.');">
-    <button type="submit">🗑️ Reiniciar Conexión Alfa</button>
-  </form>
-
-  <!-- Sección 8: Forzar generación de matches IA -->
-<h2>🔄 Generar Matches Conexión Alfa (IA)</h2>
-<form method="POST" action="/generar_matches_conexion_alfa" onsubmit="return confirm('¿Estás seguro? Esto emparejará participantes con IA.');">
-  <button type="submit">⚙️ Ejecutar Matching IA</button>
-</form>
-
-<!-- Sección 9: Botón reset ranking QR -->
-<h2>🧹 Reset Ranking Escaneo QR</h2>
-<form method="POST" action="/reset_ranking_qr" onsubmit="return confirm('¿Estás seguro de eliminar todos los registros del escaneo QR?');">
-  <button type="submit">🔄 Reiniciar Ranking QR</button>
-</form>
-
-<form action="/reset_datos_participantes" method="POST" onsubmit="return confirm('¿Seguro que deseas borrar todos los datos de los participantes? Esta acción no se puede deshacer.')">
-  <button type="submit" style="background:#ec1c24; color:white; padding:10px 20px; border:none; border-radius:6px; margin-top:15px;">
-    🔄 Reiniciar Datos de Participantes
-  </button>
-</form>
-
-<form action="/reset_adivina_participantes" method="POST" onsubmit="return confirm('¿Estás seguro de que quieres reiniciar completamente Adivina Quién? Esta acción eliminará todos los participantes.')">
-  <button type="submit" style="background-color:#ec1c24; color:white; border:none; padding:10px 15px; border-radius:6px; cursor:pointer; margin-top: 20px;">
-    🔄 Reiniciar Participantes Adivina Quién
-  </button>
-</form>
-
-<form action="/eliminar_todos_los_jugadores" method="POST" onsubmit="return confirm('¿Estás seguro de que quieres borrar TODOS los jugadores y datos asociados?');">
-  <button type="submit" style="background-color: darkred; color: white; padding: 10px 20px; border: none; border-radius: 6px;">
-    🧹 Eliminar todos los jugadores y datos
-  </button>
+<h2>🤖 Matching IA - Conexión Alfa</h2>
+<form method="POST" action="/generar_matches_conexion_alfa" onsubmit="return confirm('¿Ejecutar matching con IA?');">
+  <button type="submit">⚙️ Generar Matches IA</button>
 </form>
 
 </body>
