@@ -109,8 +109,6 @@
         <td>
           {% if p.archivo %}
             <a href="/evidencias_reto_grupal/{{ p.archivo }}" target="_blank">Ver Foto</a>
-          {% else %}
-            Sin archivo
           {% endif %}
         </td>
         <td><input type="text" name="calificacion" value="{{ p.calificacion }}"></td>
@@ -128,10 +126,34 @@
   </form>
 
   <!-- Sección 5: Botón reset ranking Adivina Quién -->
-<h2>🧹 Reset Ranking Adivina Quién</h2>
-<form method="POST" action="/reset_adivina" onsubmit="return confirm('¿Estás seguro de eliminar todos los resultados del reto Adivina Quién?');">
-  <button type="submit">🔄 Reiniciar Ranking</button>
-</form>
+  <h2>🧹 Reset Ranking Adivina Quién</h2>
+  <form method="POST" action="/reset_adivina" onsubmit="return confirm('¿Estás seguro de eliminar todos los resultados del reto Adivina Quién?');">
+    <button type="submit">🔄 Reiniciar Ranking</button>
+  </form>
+
+  <!-- Sección 6: Videos Conexión Alfa -->
+  <h2>🎥 Evidencias Conexión Alfa</h2>
+  <table>
+    <tr><th>Pareja</th><th>Video</th></tr>
+    {% for m in matches_conexion %}
+      <tr>
+        <td>{{ m.nombre_1 }} 🤝 {{ m.nombre_2 }}</td>
+        <td>
+          {% if m.evidencia %}
+            <a href="{{ url_for('static', filename='evidencias_alfa/' ~ m.evidencia) }}" target="_blank">Ver Video</a>
+          {% else %}
+            Sin video
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+
+  <!-- Sección 7: Reset Conexión Alfa -->
+  <h2>🧹 Reset Conexión Alfa</h2>
+  <form method="POST" action="/reset_conexion_alfa" onsubmit="return confirm('¿Eliminar todos los datos de Conexión Alfa? Esto incluye respuestas, matches y videos.');">
+    <button type="submit">🗑️ Reiniciar Conexión Alfa</button>
+  </form>
 
 </body>
 </html>

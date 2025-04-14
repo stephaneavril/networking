@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Tu Match Conexión Alfa</title>
+  <style>
+    body { background: #0c0e2c; color: white; font-family: 'Segoe UI', sans-serif; padding: 30px; }
+    h1 { color: #ec1c24; text-align: center; }
+    .card {
+      background: #1f2140; padding: 20px; border-radius: 10px;
+      margin: 20px auto; max-width: 700px; box-shadow: 0 0 10px rgba(255,255,255,0.1);
+    }
+    .perfil { font-style: italic; margin-bottom: 15px; }
+    form { margin-top: 20px; }
+    input[type="file"] {
+      padding: 10px; background: #fff; color: #000; border-radius: 6px;
+      display: block; margin-bottom: 10px;
+    }
+    button {
+      background: #ec1c24; color: white; padding: 10px 20px;
+      border: none; border-radius: 6px; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔗 Tu Conexión Alfa</h1>
+  {% if match %}
+    <div class="card">
+      <h3><strong>{{ match['nombre_1'] }}</strong> 🤝 <strong>{{ match['nombre_2'] }}</strong></h3>
+      <div class="perfil">{{ match['perfil_1'] }}</div>
+      <div class="perfil">{{ match['perfil_2'] }}</div>
+
+      {% if not match['evidencia'] %}
+      <form method="POST" action="/subir_video_match" enctype="multipart/form-data">
+        <input type="hidden" name="match_id" value="{{ match['id'] }}">
+          <label>Sube tu video conjunto:</label>
+          <input type="file" name="evidencia" accept="video/*" required>
+          <button type="submit">📤 Enviar evidencia</button>
+        </form>
+      {% else %}
+        <p style="color: lightgreen;">✅ Video ya enviado por este equipo.</p>
+      {% endif %}
+    </div>
+  {% else %}
+    <p>No se ha generado aún un match para ti.</p>
+  {% endif %}
+</body>
+</html>

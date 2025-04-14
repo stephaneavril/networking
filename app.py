@@ -3,6 +3,16 @@ import os
 import sqlite3
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify, session, redirect, flash
+import pickle
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
+
+# Cargar el modelo y vectorizador IA
+with open("modelo_conexion_alfa.pkl", "rb") as f:
+    modelo_ia = pickle.load(f)
+
+with open("vectorizer_conexion_alfa.pkl", "rb") as f:
+    vectorizer_ia = pickle.load(f)
 
 app = Flask(__name__)
 app.secret_key = 'clave-segura'
@@ -172,17 +182,29 @@ def guardar_reto_grupal():
 @app.route('/admin_panel', methods=['GET', 'POST'])
 def admin_panel():
     conn = get_db_connection()
+    
+    # Activar/desactivar retos
     if request.method == 'POST':
         reto_id = request.form.get('reto_id')
         nuevo_estado = request.form.get('activo')
         conn.execute("UPDATE retos SET activo = ? WHERE id = ?", (nuevo_estado, reto_id))
         conn.commit()
 
+    # Cargar datos necesarios
     retos = conn.execute("SELECT * FROM retos").fetchall()
     resultados = conn.execute("SELECT * FROM adivina_resultados ORDER BY puntos_extra DESC").fetchall()
     participaciones = conn.execute("SELECT * FROM participaciones_grupales ORDER BY timestamp DESC").fetchall()
+    matches_conexion = conn.execute("SELECT * FROM conexion_alfa_matches WHERE evidencia IS NOT NULL").fetchall()
+    
     conn.close()
-    return render_template("admin_panel.html", retos=retos, resultados=resultados, participaciones=participaciones)
+
+    return render_template(
+        "admin_panel.html",
+        retos=retos,
+        resultados=resultados,
+        participaciones=participaciones,
+        matches_conexion=matches_conexion
+    )
 
 @app.route('/calificar/<int:id>', methods=['POST'])
 def calificar(id):
@@ -362,6 +384,159 @@ def conexion_alfa_mi_perfil():
     perfil = conn.execute("SELECT * FROM conexion_alfa_respuestas WHERE correo = ?", (session['correo'],)).fetchone()
     conn.close()
     return render_template("conexion_alfa_perfil.html", perfil=perfil)
+
+@app.route('/conexion_alfa_matches', methods=['GET'])
+def conexion_alfa_matches():
+    if 'correo' not in session:
+        return redirect('/login')
+
+    correo_usuario = session['correo']
+    conn = get_db_connection()
+    datos = conn.execute("SELECT * FROM conexion_alfa_respuestas").fetchall()
+
+    textos = []
+    correos = []
+    nombres = []
+    perfiles = []
+    for row in datos:
+        respuestas = [row[f"r{i}"] for i in range(1, 8)]
+        texto = " ".join(respuestas)
+        textos.append(texto)
+        correos.append(row["correo"])
+        nombres.append(row["nombre"])
+        perfiles.append(row["perfil_ia"])
+
+    vectores = vectorizer_ia.transform(textos)
+    sim_matrix = cosine_similarity(vectores)
+
+    # Evitar duplicados y guardar matches nuevos
+    ya_guardados = conn.execute("SELECT correo_1, correo_2 FROM conexion_alfa_matches").fetchall()
+    ya_guardados_set = set((min(r["correo_1"], r["correo_2"]), max(r["correo_1"], r["correo_2"])) for r in ya_guardados)
+
+    for i in range(len(correos)):
+        for j in range(i+1, len(correos)):
+            correo1, correo2 = correos[i], correos[j]
+            nombre1, nombre2 = nombres[i], nombres[j]
+            perfil1, perfil2 = perfiles[i], perfiles[j]
+            pareja = (min(correo1, correo2), max(correo1, correo2))
+            if pareja not in ya_guardados_set:
+                conn.execute('''
+                    INSERT INTO conexion_alfa_matches (correo_1, correo_2, nombre_1, nombre_2, perfil_1, perfil_2)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (correo1, correo2, nombre1, nombre2, perfil1, perfil2))
+                conn.commit()
+
+    matches = conn.execute('''
+        SELECT * FROM conexion_alfa_matches
+        WHERE correo_1 = ? OR correo_2 = ?
+    ''', (correo_usuario, correo_usuario)).fetchall()
+
+    # Métricas IA
+    feedbacks = conn.execute("SELECT feedback FROM conexion_alfa_matches WHERE feedback IS NOT NULL").fetchall()
+    total = len(feedbacks)
+    positivos = sum(f["feedback"] == 1 for f in feedbacks)
+    negativos = sum(f["feedback"] == 0 for f in feedbacks)
+
+    if total > 0:
+        accuracy = round(positivos / total, 2)
+        precision = round(positivos / (positivos + negativos), 2) if (positivos + negativos) > 0 else 0
+        recall = round(positivos / total, 2)
+        f1 = round(2 * (precision * recall) / (precision + recall), 2) if (precision + recall) > 0 else 0
+    else:
+        accuracy = precision = recall = f1 = None
+
+    conn.close()
+    return render_template("conexion_alfa_matches.html", matches=matches,
+                           accuracy=accuracy, precision=precision, recall=recall, f1=f1)
+
+@app.route('/confirmar_match', methods=['POST'])
+def confirmar_match():
+    match_id = request.form.get('match_id')
+    respuesta = int(request.form.get('respuesta'))
+    conn = get_db_connection()
+    conn.execute("UPDATE conexion_alfa_matches SET feedback = ? WHERE id = ?", (respuesta, match_id))
+    conn.commit()
+    conn.close()
+    flash("✅ ¡Gracias por tu respuesta!")
+    return redirect('/conexion_alfa_matches')
+
+@app.route('/subir_video_match', methods=['GET', 'POST'])
+def subir_video_match():
+    if 'correo' not in session:
+        return redirect('/login')
+    
+    correo = session['correo']
+    conn = get_db_connection()
+    match = conn.execute('''
+        SELECT * FROM conexion_alfa_matches 
+        WHERE correo_1 = ? OR correo_2 = ?
+    ''', (correo, correo)).fetchone()
+
+    if not match:
+        conn.close()
+        flash("❌ No tienes un match asignado.")
+        return redirect('/')
+
+    if request.method == 'POST':
+        archivo = request.files.get('video')
+        if archivo:
+            nombre_archivo = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{archivo.filename}"
+            ruta = os.path.join('static/evidencias_alfa', nombre_archivo)
+            archivo.save(ruta)
+
+            conn.execute('''
+                UPDATE conexion_alfa_matches
+                SET evidencia = ?
+                WHERE id = ?
+            ''', (nombre_archivo, match['id']))
+            conn.commit()
+            flash("✅ Video subido exitosamente.")
+            return redirect('/conexion_alfa_mi_perfil')
+    
+    conn.close()
+    return render_template('conexion_alfa_subir_video.html', match=match)
+
+@app.route('/conexion_alfa_match')
+def conexion_alfa_match():
+    if 'correo' not in session:
+        return redirect('/login')
+
+    correo = session['correo']
+    conn = get_db_connection()
+
+    match = conn.execute('''
+        SELECT * FROM conexion_alfa_matches
+        WHERE correo_1 = ? OR correo_2 = ?
+        LIMIT 1
+    ''', (correo, correo)).fetchone()
+
+    conn.close()
+
+    if not match:
+        return "❌ Aún no tienes match asignado. Espera a que el sistema los genere."
+
+    return render_template('conexion_alfa_match.html', match=match)
+
+@app.route('/reset_conexion_alfa', methods=['POST'])
+def reset_conexion_alfa():
+    conn = get_db_connection()
+
+    # Borrar registros de la base de datos
+    conn.execute("DELETE FROM conexion_alfa_matches")
+    conn.execute("DELETE FROM conexion_alfa_respuestas")
+    conn.commit()
+    conn.close()
+
+    # Borrar archivos de evidencia de video
+    carpeta = 'static/evidencias_alfa'
+    if os.path.exists(carpeta):
+        for archivo in os.listdir(carpeta):
+            ruta = os.path.join(carpeta, archivo)
+            if os.path.isfile(ruta):
+                os.remove(ruta)
+
+    flash("✅ Conexión Alfa reiniciado correctamente.")
+    return redirect('/admin_panel')
 
 # -------------------- RUN --------------------
 if __name__ == '__main__':

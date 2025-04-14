@@ -1,2 +1,24 @@
-<h2>Tu Perfil Generado con IA</h2>
-<p>{{ perfil.perfil_ia }}</p>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Tu Perfil Generado con IA</title>
+  <style>
+    body { background: #0c0e2c; color: white; font-family: 'Segoe UI', sans-serif; padding: 30px; }
+    h1 { color: #ec1c24; }
+    .perfil { background: #1f2140; padding: 20px; border-radius: 10px; font-size: 1.1em; }
+    .boton {
+      background: #ec1c24; color: white; padding: 12px 20px; font-size: 1em;
+      border: none; border-radius: 6px; cursor: pointer; margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Tu Perfil Generado con IA</h1>
+  <div class="perfil">{{ perfil['perfil_ia'] }}</div>
+
+  <form action="/conexion_alfa_match" method="GET">
+    <button class="boton" type="submit">🔗 Ver mi Conexión Alfa</button>
+  </form>
+</body>
+</html>
