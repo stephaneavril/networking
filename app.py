@@ -93,7 +93,7 @@ def preguntas_post_login():
         conn.commit()
         conn.close()
         flash("✅ ¡Gracias! Tu información ha sido registrada.")
-        return redirect('/conexion_alfa_mi_perfil')
+        return redirect('/')
 
     conn.close()
     return render_template('preguntas_post_login.html', ya_respondio=ya_respondio)
