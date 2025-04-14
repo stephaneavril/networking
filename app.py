@@ -600,6 +600,13 @@ def generar_matches_conexion_alfa():
     flash(f"✅ {nuevos_matches} matches generados con IA. Métricas: Accuracy={accuracy}, Precision={precision}, Recall={recall}, F1={f1}")
     return redirect('/admin_panel')
 
+@app.route('/forzar_matches_conexion_alfa', methods=['POST'])
+def forzar_matches_conexion_alfa():
+    import subprocess
+    subprocess.call(["python", "generar_matches_conexion_alfa.py"])
+    flash("✅ Matches de Conexión Alfa generados correctamente.")
+    return redirect('/admin_panel')
+
 # -------------------- RUN --------------------
 if __name__ == '__main__':
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
