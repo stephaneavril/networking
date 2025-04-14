@@ -65,29 +65,32 @@ def preguntas_post_login():
     ya_respondio = conn.execute("SELECT * FROM conexion_alfa_respuestas WHERE correo = ?", (correo,)).fetchone()
 
     if request.method == 'POST' and not ya_respondio:
-        respuestas = [request.form.get(f'r{i}') for i in range(1, 9)]  # r1 a r8
+        # r1 a r6 = Adivina Quién + IA
+        # r8, r9, r10, r11 = nuevas preguntas IA
+        respuestas = [request.form.get(f'r{i}') for i in range(1, 7)] + \
+                     [request.form.get(f'r{i}') for i in [8, 9, 10, 11]]
+
         perfil_ia = generar_perfil_ia(nombre, respuestas)
 
         # Guardar en conexion_alfa_respuestas (IA)
         conn.execute('''
             INSERT INTO conexion_alfa_respuestas 
-            (nombre, correo, r1, r2, r3, r4, r5, r6, r7, r8, perfil_ia)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (nombre, correo, *respuestas, perfil_ia))
+            (nombre, correo, r1, r2, r3, r4, r5, r6, r8, r9, r10, r11, r13)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (nombre, correo, *respuestas, ""))
 
         # Guardar en adivina_participantes
         conn.execute('''
             INSERT INTO adivina_participantes 
-            (nombre_completo, superpoder, pasion, dato_curioso, pelicula_favorita, actor_favorito, no_soporto)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            (nombre_completo, superpoder, pasion, dato_curioso, actor_favorito, no_soporto)
+            VALUES (?, ?, ?, ?, ?, ?)
         ''', (
             nombre,
-            respuestas[0],  # superpoder
-            respuestas[1],  # pasion
-            respuestas[2],  # dato curioso
-            respuestas[3],  # pelicula favorita
-            respuestas[4],  # actor favorito
-            respuestas[5]   # no soporto
+            respuestas[0],  # r1: superpoder
+            respuestas[1],  # r2: pasion
+            respuestas[2],  # r3: dato curioso
+            respuestas[4],  # r5: actor favorito
+            respuestas[5]   # r6: no soporto
         ))
 
         conn.commit()
