@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Respuestas Curiosas</title>
+  <style>
+    body {
+      background-color: #0c0e2c;
+      color: white;
+      font-family: 'Segoe UI', sans-serif;
+      padding: 30px;
+    }
+    .carta {
+      background-color: #1f2140;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+    }
+    h1 {
+      color: #ec1c24;
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    strong {
+      color: #ffca28;
+    }
+  </style>
+</head>
+<body>
+  <h1>💬 Respuestas Curiosas de Participantes</h1>
+  {% for p in curiosidades %}
+    <div class="carta">
+      <p><strong>Nombre:</strong> {{ p['nombre_completo'] }}</p>
+      <p><strong>Superpoder:</strong> {{ p['superpoder'] }}</p>
+      <p><strong>Pasion:</strong> {{ p['pasion'] }}</p>
+      <p><strong>Dato curioso:</strong> {{ p['dato_curioso'] }}</p>
+      <p><strong>No soporta:</strong> {{ p['no_soporto'] }}</p>
+      <p><strong>Pelicula:</strong> {{ p['pelicula_favorita'] }}</p>
+      <p><strong>Libro:</strong> {{ p['mejor_libro'] }}</p>
+      <p><strong>Concierto:</strong> {{ p['mejor_concierto'] }}</p>
+    </div>
+  {% endfor %}
+</body>
+</html>

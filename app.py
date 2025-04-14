@@ -145,11 +145,12 @@ def adivina_finalizado():
     data = request.get_json()
     jugador = session['jugador']
     aciertos = data.get("aciertos")
+    fallos = data.get("fallos", 0)  # agregar esta línea para fallos si no viene
 
     if not isinstance(aciertos, int):
         return jsonify({"error": "Datos inválidos"}), 400
 
-    puntos_totales = aciertos * 3
+    puntos_totales = (aciertos * 10) - (fallos * 10)
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -169,7 +170,7 @@ def adivina_finalizado():
     conn.close()
 
     return jsonify({
-        "message": f"🎉 ¡Reto completado! {jugador} ganó {total_final} puntos ({aciertos} aciertos + {bonus} bonus).",
+        "message": f"🎉 ¡Reto completado! {jugador} ganó {total_final} puntos ({aciertos} aciertos + {bonus} bonus - {fallos * 10} por errores).",
         "redirect": "/ranking_adivina"
     })
 
@@ -235,6 +236,17 @@ def generar_contenido_adivina():
     except Exception as e:
         flash(f"❌ Error generando contenido: {e}")
     return redirect('/admin_panel')
+
+@app.route('/respuestas_curiosas')
+def respuestas_curiosas():
+    conn = get_db_connection()
+    datos = conn.execute("SELECT * FROM adivina_participantes").fetchall()
+    conn.close()
+
+    # Elegimos aleatoriamente 10 respuestas distintas
+    import random
+    curiosidades = random.sample(datos, min(len(datos), 10))
+    return render_template('respuestas_curiosas.html', curiosidades=curiosidades)
 
 # -------------------- SUBIR EVIDENCIA INDIVIDUAL --------------------
 @app.route('/subir_evidencia', methods=['POST'])
