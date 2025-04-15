@@ -51,8 +51,12 @@
 </head>
 <body>
   <div class="container">
-    <h1>📸 Reto Foto</h1>
-
+    {% if 'MI6' in reto_nombre %}
+      <img src="{{ url_for('static', filename='images/mi6.jpg') }}" alt="MI6 Banner" style="max-width: 100%; border-radius: 15px; margin-bottom: 20px;">
+    {% endif %}
+  
+    <h1>📸 {{ reto_nombre }}</h1>
+  
     {% if ya_existe %}
       <div class="ya-subido">
         <p>Ya has subido tu foto para este reto. ¡Gracias por participar!</p>
@@ -65,5 +69,6 @@
       </form>
     {% endif %}
   </div>
+  
 </body>
 </html>

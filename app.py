@@ -601,18 +601,45 @@ def ranking_fotos():
 @app.route('/reset_reto_foto', methods=['POST'])
 def reset_reto_foto():
     conn = get_db_connection()
-    conn.execute("DELETE FROM votos_reto_foto")
-    conn.execute("DELETE FROM reto_foto")
-    conn.commit()
+
+    # Obtener IDs de todos los retos de foto (Reto Foto + MI6)
+    reto_ids = conn.execute(
+        "SELECT id FROM retos WHERE nombre = 'Reto Foto' OR nombre LIKE 'MI6%'"
+    ).fetchall()
+    ids = [str(r["id"]) for r in reto_ids]
+
+    if ids:
+        # Borrar votos solo de esas fotos
+        foto_ids = conn.execute(
+            f"SELECT id FROM reto_foto WHERE reto_id IN ({','.join(['?'] * len(ids))})",
+            ids
+        ).fetchall()
+        foto_ids_int = [str(f["id"]) for f in foto_ids]
+
+        if foto_ids_int:
+            conn.execute(
+                f"DELETE FROM votos_reto_foto WHERE id_foto IN ({','.join(['?'] * len(foto_ids_int))})",
+                foto_ids_int
+            )
+
+        # Borrar fotos
+        conn.execute(
+            f"DELETE FROM reto_foto WHERE reto_id IN ({','.join(['?'] * len(ids))})",
+            ids
+        )
+        conn.commit()
+
     conn.close()
 
+    # Eliminar archivos del folder
     carpeta = 'static/fotos_reto_foto'
-    for archivo in os.listdir(carpeta):
-        ruta = os.path.join(carpeta, archivo)
-        if os.path.isfile(ruta):
-            os.remove(ruta)
+    if os.path.exists(carpeta):
+        for archivo in os.listdir(carpeta):
+            ruta = os.path.join(carpeta, archivo)
+            if os.path.isfile(ruta):
+                os.remove(ruta)
 
-    flash("✅ Reto Foto reiniciado correctamente.")
+    flash("✅ Reto Foto y fotos MI6 reiniciadas correctamente.")
     return redirect('/admin_panel')
 
 # -------------------- CONEXION ALFA --------------------
