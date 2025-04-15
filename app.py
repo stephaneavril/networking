@@ -313,46 +313,31 @@ def admin_panel():
     # Activar/desactivar retos
     if request.method == 'POST':
         if 'activar_solo' in request.form:
-            # 🔁 Nueva opción: activar solo un reto MI6 o Reto Foto
             id_a_activar = int(request.form['activar_solo'])
             conn.execute("UPDATE retos SET activo = 0 WHERE nombre LIKE 'MI6%' OR nombre = 'Reto Foto'")
             conn.execute("UPDATE retos SET activo = 1 WHERE id = ?", (id_a_activar,))
             conn.commit()
             flash("✅ Se activó solo ese reto MI6.")
         elif 'reto_id' in request.form and 'activo' in request.form:
-            # Activación/desactivación tradicional
             reto_id = request.form.get('reto_id')
             nuevo_estado = request.form.get('activo')
             conn.execute("UPDATE retos SET activo = ? WHERE id = ?", (nuevo_estado, reto_id))
             conn.commit()
             flash("✅ Estado del reto actualizado correctamente.")
 
-    # Cargar datos necesarios
+    # Datos para el panel
     retos = conn.execute("SELECT * FROM retos").fetchall()
     resultados = conn.execute("SELECT * FROM adivina_resultados ORDER BY puntos_extra DESC").fetchall()
-    participaciones = conn.execute("SELECT * FROM participaciones_grupales ORDER BY timestamp DESC").fetchall()
-    matches_conexion = conn.execute("SELECT * FROM conexion_alfa_matches WHERE evidencia IS NOT NULL").fetchall()
-    
+    matches_conexion = conn.execute("SELECT * FROM conexion_alfa_matches").fetchall()
+
     conn.close()
 
     return render_template(
         "admin_panel.html",
         retos=retos,
         resultados=resultados,
-        participaciones=participaciones,
         matches_conexion=matches_conexion
     )
-
-@app.route('/calificar/<int:id>', methods=['POST'])
-def calificar(id):
-    calificacion = request.form.get('calificacion')
-    comentario = request.form.get('comentario')
-    conn = get_db_connection()
-    conn.execute("UPDATE participaciones_grupales SET calificacion = ?, comentario = ? WHERE id = ?",
-                 (calificacion, comentario, id))
-    conn.commit()
-    conn.close()
-    return redirect('/admin_panel')
 
 # -------------------- RETOS FOTO Y MI6 --------------------
 
@@ -903,46 +888,44 @@ def generar_matches_conexion_alfa():
     conn = get_db_connection()
     datos = conn.execute("SELECT * FROM conexion_alfa_respuestas").fetchall()
 
+    if len(datos) < 2:
+        conn.close()
+        flash("❌ No hay suficientes participantes para generar matches.")
+        return redirect('/admin_panel')
+
     textos = []
     correos = []
     nombres = []
     perfiles = []
 
     for row in datos:
-        respuestas = [row[f"r{i}"] for i in range(1, 13)]  # ahora de r1 a r12
+        respuestas = [row[f"r{i}"] for i in range(1, 13)]
         texto = " ".join(respuestas)
         textos.append(texto)
         correos.append(row["correo"])
         nombres.append(row["nombre"])
         perfiles.append(row["perfil_ia"])
 
-    if not textos:
-        conn.close()
-        flash("❌ No hay suficientes participantes para generar matches.")
-        return redirect('/admin_panel')
-
     vectores = vectorizer_ia.transform(textos)
     sim_matrix = cosine_similarity(vectores)
 
-    # Evitar duplicados ya existentes
     ya_guardados = conn.execute("SELECT correo_1, correo_2 FROM conexion_alfa_matches").fetchall()
     ya_guardados_set = set((min(r["correo_1"], r["correo_2"]), max(r["correo_1"], r["correo_2"])) for r in ya_guardados)
 
     nuevos_matches = 0
-    emparejados = set()  # para evitar que una persona tenga más de un match
+    ya_pareados = set()
 
     for i in range(len(correos)):
-        if correos[i] in emparejados:
+        if correos[i] in ya_pareados:
             continue
 
         mejor_j = None
         mejor_sim = -1
+
         for j in range(len(correos)):
-            if i == j or correos[j] in emparejados:
+            if i == j or correos[j] in ya_pareados:
                 continue
-            pareja = (min(correos[i], correos[j]), max(correos[i], correos[j]))
-            if pareja in ya_guardados_set:
-                continue
+
             sim = sim_matrix[i][j]
             if sim > mejor_sim:
                 mejor_sim = sim
@@ -952,34 +935,22 @@ def generar_matches_conexion_alfa():
             correo1, correo2 = correos[i], correos[mejor_j]
             nombre1, nombre2 = nombres[i], nombres[mejor_j]
             perfil1, perfil2 = perfiles[i], perfiles[mejor_j]
+
             pareja = (min(correo1, correo2), max(correo1, correo2))
-            conn.execute('''
-                INSERT INTO conexion_alfa_matches (correo_1, correo_2, nombre_1, nombre_2, perfil_1, perfil_2)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (correo1, correo2, nombre1, nombre2, perfil1, perfil2))
-            ya_guardados_set.add(pareja)
-            emparejados.update([correo1, correo2])
-            nuevos_matches += 1
+            if pareja not in ya_guardados_set:
+                conn.execute('''
+                    INSERT INTO conexion_alfa_matches (correo_1, correo_2, nombre_1, nombre_2, perfil_1, perfil_2)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (correo1, correo2, nombre1, nombre2, perfil1, perfil2))
+                nuevos_matches += 1
+                ya_guardados_set.add(pareja)
+                ya_pareados.add(correo1)
+                ya_pareados.add(correo2)
 
     conn.commit()
-
-    # Métricas IA
-    feedbacks = conn.execute("SELECT feedback FROM conexion_alfa_matches WHERE feedback IS NOT NULL").fetchall()
-    total = len(feedbacks)
-    positivos = sum(f["feedback"] == 1 for f in feedbacks)
-    negativos = sum(f["feedback"] == 0 for f in feedbacks)
-
-    if total > 0:
-        accuracy = round(positivos / total, 2)
-        precision = round(positivos / (positivos + negativos), 2) if (positivos + negativos) > 0 else 0
-        recall = round(positivos / total, 2)
-        f1 = round(2 * (precision * recall) / (precision + recall), 2) if (precision + recall) > 0 else 0
-    else:
-        accuracy = precision = recall = f1 = None
-
     conn.close()
 
-    flash(f"✅ {nuevos_matches} matches generados con IA. Métricas: Accuracy={accuracy}, Precision={precision}, Recall={recall}, F1={f1}")
+    flash(f"✅ {nuevos_matches} matches generados exitosamente.")
     return redirect('/admin_panel')
 
 @app.route('/forzar_matches_conexion_alfa', methods=['POST'])
