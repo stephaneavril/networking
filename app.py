@@ -806,66 +806,60 @@ def conexion_alfa_match():
     correo = session['correo']
     conn = get_db_connection()
 
-    # Buscar si ya tiene un match
+    datos = conn.execute("SELECT * FROM conexion_alfa_respuestas").fetchall()
+
+    if not datos:
+        conn.close()
+        return "❌ Aún no hay suficientes datos para hacer matching."
+
+    # Procesar textos para vectorización
+    textos = [" ".join([d[f"r{i}"] for i in range(1, 8)]) for d in datos]
+    correos = [d["correo"] for d in datos]
+
+    vectores = vectorizer_ia.transform(textos)
+    sim_matrix = cosine_similarity(vectores)
+
+    # Buscar el índice del usuario actual
+    try:
+        idx_actual = correos.index(correo)
+    except ValueError:
+        conn.close()
+        return "❌ No tienes respuestas registradas."
+
+    similitudes = sim_matrix[idx_actual]
+    similitudes[idx_actual] = -1  # evitar matching contigo mismo
+    mejor_idx = similitudes.argmax()
+
+    # Crear o buscar el match
+    correo_1 = min(correo, correos[mejor_idx])
+    correo_2 = max(correo, correos[mejor_idx])
+
+    ya_guardado = conn.execute('''
+        SELECT * FROM conexion_alfa_matches
+        WHERE (correo_1 = ? AND correo_2 = ?)
+    ''', (correo_1, correo_2)).fetchone()
+
+    if not ya_guardado:
+        nombre_1 = datos[idx_actual]["nombre"]
+        nombre_2 = datos[mejor_idx]["nombre"]
+        perfil_1 = datos[idx_actual]["perfil_ia"]
+        perfil_2 = datos[mejor_idx]["perfil_ia"]
+        conn.execute('''
+            INSERT INTO conexion_alfa_matches (correo_1, correo_2, nombre_1, nombre_2, perfil_1, perfil_2)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (correo_1, correo_2, nombre_1, nombre_2, perfil_1, perfil_2))
+        conn.commit()
+
     match = conn.execute('''
         SELECT * FROM conexion_alfa_matches
         WHERE correo_1 = ? OR correo_2 = ?
         LIMIT 1
     ''', (correo, correo)).fetchone()
 
-    # ⛔ Si no hay match todavía, lo generamos aquí mismo
-    if not match:
-        datos = conn.execute("SELECT * FROM conexion_alfa_respuestas").fetchall()
-
-        textos = []
-        correos = []
-        nombres = []
-        perfiles = []
-
-        for row in datos:
-            respuestas = [row[f"r{i}"] for i in range(1, 8)]
-            texto = " ".join(respuestas)
-            textos.append(texto)
-            correos.append(row["correo"])
-            nombres.append(row["nombre"])
-            perfiles.append(row["perfil_ia"])
-
-        vectores = vectorizer_ia.transform(textos)
-        sim_matrix = cosine_similarity(vectores)
-
-        idx = correos.index(correo)
-        similitudes = sim_matrix[idx]
-        mejores = np.argsort(similitudes)[::-1]
-
-        for i in mejores:
-            if i != idx:
-                correo_match = correos[i]
-                # Evita duplicado
-                ya_hay = conn.execute('''
-                    SELECT * FROM conexion_alfa_matches
-                    WHERE (correo_1 = ? AND correo_2 = ?) OR (correo_1 = ? AND correo_2 = ?)
-                ''', (correo, correo_match, correo_match, correo)).fetchone()
-                
-                if not ya_hay:
-                    conn.execute('''
-                        INSERT INTO conexion_alfa_matches (correo_1, correo_2, nombre_1, nombre_2, perfil_1, perfil_2)
-                        VALUES (?, ?, ?, ?, ?, ?)
-                    ''', (
-                        correo, correo_match,
-                        nombres[idx], nombres[i],
-                        perfiles[idx], perfiles[i]
-                    ))
-                    conn.commit()
-                    break
-
-        # Obtener el match recién insertado
-        match = conn.execute('''
-            SELECT * FROM conexion_alfa_matches
-            WHERE correo_1 = ? OR correo_2 = ?
-            LIMIT 1
-        ''', (correo, correo)).fetchone()
-
     conn.close()
+
+    if not match:
+        return "❌ No se encontró ningún match."
 
     return render_template('conexion_alfa_match.html', match=match)
 
