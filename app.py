@@ -805,78 +805,22 @@ def conexion_alfa_match():
     correo = session['correo']
     conn = get_db_connection()
 
-    # Verificar si ya tiene match
+    # Buscar match si existe
     match = conn.execute('''
         SELECT * FROM conexion_alfa_matches 
         WHERE correo_1 = ? OR correo_2 = ?
+        LIMIT 1
     ''', (correo, correo)).fetchone()
 
-    if match:
-        conn.close()
-        return render_template("conexion_alfa_match.html", match=match, sin_match=False)
+    feedback_dado = match['feedback'] if match and match['feedback'] is not None else None
 
-    # Obtener respuestas para generar match si no lo tiene aún
-    datos = conn.execute("SELECT * FROM conexion_alfa_respuestas").fetchall()
-
-    if not datos or len(datos) < 2:
-        conn.close()
-        return render_template("conexion_alfa_match.html", match=None, sin_match=True)
-
-    textos = [" ".join([d[f"r{i}"] for i in range(1, 13)]) for d in datos]
-    correos = [d["correo"] for d in datos]
-    nombres = [d["nombre"] for d in datos]
-    perfiles = [d["perfil_ia"] for d in datos]
-
-    # Verificar que el usuario tiene respuestas
-    if correo not in correos:
-        conn.close()
-        return "❌ No tienes respuestas registradas."
-
-    vectores = vectorizer_ia.transform(textos)
-    sim_matrix = cosine_similarity(vectores)
-
-    idx_actual = correos.index(correo)
-    similitudes = sim_matrix[idx_actual]
-    similitudes[idx_actual] = -1  # evitar matching consigo mismo
-
-    # Buscar mejor pareja disponible
-    mejor_idx = None
-    mejor_sim = -1
-    for j, sim in enumerate(similitudes):
-        if correos[j] == correo:
-            continue
-        ya_match = conn.execute('''
-            SELECT * FROM conexion_alfa_matches
-            WHERE (correo_1 = ? AND correo_2 = ?) OR (correo_1 = ? AND correo_2 = ?)
-        ''', (correo, correos[j], correos[j], correo)).fetchone()
-        if not ya_match and sim > mejor_sim:
-            mejor_sim = sim
-            mejor_idx = j
-
-    if mejor_idx is not None:
-        correo_1 = min(correo, correos[mejor_idx])
-        correo_2 = max(correo, correos[mejor_idx])
-        nombre_1 = nombres[correos.index(correo_1)]
-        nombre_2 = nombres[correos.index(correo_2)]
-        perfil_1 = perfiles[correos.index(correo_1)]
-        perfil_2 = perfiles[correos.index(correo_2)]
-
-        conn.execute('''
-            INSERT INTO conexion_alfa_matches (correo_1, correo_2, nombre_1, nombre_2, perfil_1, perfil_2)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (correo_1, correo_2, nombre_1, nombre_2, perfil_1, perfil_2))
-        conn.commit()
-
-        match = conn.execute('''
-            SELECT * FROM conexion_alfa_matches 
-            WHERE correo_1 = ? OR correo_2 = ?
-        ''', (correo, correo)).fetchone()
-        conn.close()
-        return render_template("conexion_alfa_match.html", match=match, sin_match=False)
-    
     conn.close()
-    # No se encontró una pareja disponible
-    return render_template("conexion_alfa_match.html", match=None, sin_match=True)
+    return render_template(
+        "conexion_alfa_match.html",
+        match=match,
+        sin_match=(match is None),
+        feedback_dado=feedback_dado
+    )
 
 @app.route('/reset_conexion_alfa', methods=['POST'])
 def reset_conexion_alfa():

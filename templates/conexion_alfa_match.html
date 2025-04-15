@@ -30,6 +30,17 @@
       font-size: 0.95em;
       text-align: center;
     }
+    .feedback {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .feedback button {
+      background: transparent;
+      border: none;
+      font-size: 2em;
+      margin: 0 10px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -46,9 +57,9 @@
       <div class="perfil">{{ match['perfil_2'] }}</div>
 
       {% if match['razon_match'] %}
-        <p style="margin-top: 10px; color: lightblue;">
-          🧠 <strong>Razón del match:</strong> {{ match['razon_match'] }}
-        </p>
+      <div class="info">
+        🧠 <strong>Razón del match:</strong><br>{{ match['razon_match'] }}
+      </div>
       {% endif %}
 
       <div class="info">
@@ -65,9 +76,25 @@
       {% else %}
         <p style="color: lightgreen;">✅ Video ya enviado por este equipo.</p>
       {% endif %}
+
+      {% if feedback_dado is none %}
+        <div class="feedback">
+          <p>🤖 ¿Este match te parece acertado?</p>
+          <form method="POST" action="/feedback_match">
+            <input type="hidden" name="match_id" value="{{ match['id'] }}">
+            <button type="submit" name="feedback" value="1">👍</button>
+            <button type="submit" name="feedback" value="0">👎</button>
+          </form>
+        </div>
+      {% elif feedback_dado == 1 %}
+        <p style="color: lightgreen; text-align:center;">✅ Gracias por tu feedback: Te gustó este match.</p>
+      {% else %}
+        <p style="color: #ff7675; text-align:center;">❌ Gracias por tu feedback: No te gustó este match.</p>
+      {% endif %}
     </div>
   {% else %}
     <p style="text-align: center; color: #ccc;">❌ No se ha generado aún un match para ti.</p>
   {% endif %}
+
 </body>
 </html>
