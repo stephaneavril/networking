@@ -901,9 +901,6 @@ def reset_conexion_alfa():
 @app.route('/generar_matches_conexion_alfa', methods=['POST'])
 def generar_matches_conexion_alfa():
     import traceback
-    from flask import Request
-    from werkzeug.test import EnvironBuilder
-    import json
 
     conn = get_db_connection()
     try:
@@ -920,23 +917,14 @@ def generar_matches_conexion_alfa():
         participantes = [dict(row) for row in datos]
 
         print("⚙️ Ejecutando IA localmente (sin requests)...")
-        # Simulamos petición local a /api/conexion_alfa_match
-        builder = EnvironBuilder(method='POST', path='/api/conexion_alfa_match', json={"participantes": participantes})
-        env = builder.get_environ()
-        req = Request(env)
+        with app.test_client() as client:
+            response = client.post('/api/conexion_alfa_match', json={"participantes": participantes})
 
-        with app.test_request_context(environ=env):
-            response = api_conexion_alfa_match()
-            if isinstance(response, tuple):
-                body, status_code = response
-            else:
-                body, status_code = response, 200
-
-        if status_code != 200:
+        if response.status_code != 200:
             flash("❌ Error al generar matches usando IA interna.")
             return redirect('/admin_panel')
 
-        matches = body.get_json().get("matches", [])
+        matches = response.get_json().get("matches", [])
         print(f"🔄 Matches recibidos: {len(matches)}")
 
         ya_guardados = set(
@@ -969,7 +957,6 @@ def generar_matches_conexion_alfa():
         print("❌ ERROR en generar_matches_conexion_alfa:", str(e))
         traceback.print_exc()
         flash("❌ Error interno al generar los matches.")
-
     finally:
         conn.close()
 
