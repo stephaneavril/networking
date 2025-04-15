@@ -822,6 +822,76 @@ def conexion_alfa_match():
         feedback_dado=feedback_dado
     )
 
+@app.route('/api/conexion_alfa_match', methods=['POST'])
+def api_conexion_alfa_match():
+    from sklearn.metrics.pairwise import cosine_similarity
+
+    data = request.get_json()
+    participantes = data.get("participantes", [])
+
+    if not participantes or len(participantes) < 2:
+        return jsonify({"error": "No hay suficientes participantes"}), 400
+
+    textos = []
+    correos = []
+    nombres = []
+    perfiles = []
+
+    for p in participantes:
+        respuestas = [p.get(f"r{i}", "") or "" for i in range(1, 13)]
+        texto = " ".join(respuestas)
+        textos.append(texto)
+        correos.append(p["correo"])
+        nombres.append(p["nombre"])
+        perfiles.append(p.get("perfil_ia", ""))
+
+    vectores = vectorizer_ia.transform(textos)
+    sim_matrix = cosine_similarity(vectores)
+
+    ya_pareados = set()
+    matches = []
+
+    for i in range(len(correos)):
+        if correos[i] in ya_pareados:
+            continue
+
+        mejor_j = None
+        mejor_sim = -1
+
+        for j in range(len(correos)):
+            if i == j or correos[j] in ya_pareados:
+                continue
+
+            sim = sim_matrix[i][j]
+            if sim > mejor_sim:
+                mejor_sim = sim
+                mejor_j = j
+
+        if mejor_j is not None:
+            i1, i2 = i, mejor_j
+            correo_1 = correos[i1]
+            correo_2 = correos[i2]
+            nombre_1 = nombres[i1]
+            nombre_2 = nombres[i2]
+            perfil_1 = perfiles[i1]
+            perfil_2 = perfiles[i2]
+            razon = f"Ambos tienen afinidades destacadas: {round(mejor_sim * 100)}% de coincidencia según sus respuestas."
+
+            matches.append({
+                "correo_1": correo_1,
+                "correo_2": correo_2,
+                "nombre_1": nombre_1,
+                "nombre_2": nombre_2,
+                "perfil_1": perfil_1,
+                "perfil_2": perfil_2,
+                "razon": razon
+            })
+
+            ya_pareados.add(correo_1)
+            ya_pareados.add(correo_2)
+
+    return jsonify({"matches": matches})
+
 @app.route('/reset_conexion_alfa', methods=['POST'])
 def reset_conexion_alfa():
     conn = get_db_connection()
@@ -845,55 +915,72 @@ def reset_conexion_alfa():
 
 @app.route('/generar_matches_conexion_alfa', methods=['POST'])
 def generar_matches_conexion_alfa():
+    import requests
+    import traceback
+
     conn = get_db_connection()
     try:
+        print("📥 Obteniendo datos de participantes...")
         datos = conn.execute("SELECT * FROM conexion_alfa_respuestas").fetchall()
 
         if len(datos) < 2:
             flash("❌ No hay suficientes participantes para generar matches.")
             return redirect('/admin_panel')
 
-        # Verificar si el número de participantes es impar
         if len(datos) % 2 != 0:
             flash("⚠️ Número impar de participantes, alguien se quedará sin match.")
-        
-        # Enviar datos al endpoint externo
-        import requests
-        respuesta = requests.post(
-            'https://networking-sxxt.onrender.com/conexion_alfa_match',
-            json={"participantes": [dict(row) for row in datos]}
-        )
 
-        if respuesta.status_code != 200:
-            flash("❌ Error al generar matches usando IA externa.")
+        participantes = [dict(row) for row in datos]
+
+        # 🌐 CAMBIA AQUÍ SI ESTÁS EN LOCAL O PRODUCCIÓN
+        # local: http://localhost:5000/api/conexion_alfa_match
+        # producción: https://networking-sxxt.onrender.com/api/conexion_alfa_match
+        endpoint_ia = 'https://networking-sxxt.onrender.com/api/conexion_alfa_match'
+
+        print("📤 Enviando datos al endpoint IA:", endpoint_ia)
+        response = requests.post(endpoint_ia, json={"participantes": participantes})
+
+        print("🌐 Código de respuesta:", response.status_code)
+        print("📦 Respuesta JSON:", response.text)
+
+        if response.status_code != 200:
+            flash("❌ Error al generar matches usando IA.")
             return redirect('/admin_panel')
 
-        matches = respuesta.json().get("matches", [])
-        nuevos = 0
-        ya_guardados = set(tuple(sorted((r["correo_1"], r["correo_2"])))
-                           for r in conn.execute("SELECT correo_1, correo_2 FROM conexion_alfa_matches").fetchall())
+        matches = response.json().get("matches", [])
+        print(f"🔄 Matches recibidos: {len(matches)}")
 
+        ya_guardados = set(
+            tuple(sorted((r["correo_1"], r["correo_2"])))
+            for r in conn.execute("SELECT correo_1, correo_2 FROM conexion_alfa_matches").fetchall()
+        )
+
+        nuevos = 0
         for match in matches:
             c1, c2 = match["correo_1"], match["correo_2"]
             pareja = tuple(sorted((c1, c2)))
             if pareja not in ya_guardados:
                 conn.execute('''
-                    INSERT INTO conexion_alfa_matches (correo_1, correo_2, nombre_1, nombre_2, perfil_1, perfil_2, razon_match)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO conexion_alfa_matches (
+                        correo_1, correo_2, nombre_1, nombre_2, perfil_1, perfil_2, razon_match
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
                 ''', (
                     c1, c2,
                     match["nombre_1"], match["nombre_2"],
                     match["perfil_1"], match["perfil_2"],
-                    match["razon"]
+                    match.get("razon", "🤖 Este match fue generado por IA con base en afinidades comunes.")
                 ))
                 nuevos += 1
                 ya_guardados.add(pareja)
 
         conn.commit()
         flash(f"✅ {nuevos} matches generados con éxito.")
+
     except Exception as e:
         print("❌ ERROR en generar_matches_conexion_alfa:", str(e))
+        traceback.print_exc()
         flash("❌ Error interno al generar los matches.")
+
     finally:
         conn.close()
 
