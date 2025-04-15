@@ -680,6 +680,11 @@ def conexion_alfa():
     conn = get_db_connection()
 
     ya_existe = conn.execute("SELECT * FROM conexion_alfa_respuestas WHERE correo = ?", (correo,)).fetchone()
+    
+    # 🔁 Si ya tiene respuestas, ir directo al match
+    if ya_existe:
+        conn.close()
+        return redirect('/conexion_alfa_match')
 
     if request.method == 'POST' and not ya_existe:
         respuestas = [request.form.get(f'r{i}') for i in range(1, 8)]
@@ -828,16 +833,66 @@ def conexion_alfa_match():
     correo = session['correo']
     conn = get_db_connection()
 
+    # Buscar si ya tiene un match
     match = conn.execute('''
         SELECT * FROM conexion_alfa_matches
         WHERE correo_1 = ? OR correo_2 = ?
         LIMIT 1
     ''', (correo, correo)).fetchone()
 
-    conn.close()
-
+    # ⛔ Si no hay match todavía, lo generamos aquí mismo
     if not match:
-        return "❌ Aún no tienes match asignado. Espera a que el sistema los genere."
+        datos = conn.execute("SELECT * FROM conexion_alfa_respuestas").fetchall()
+
+        textos = []
+        correos = []
+        nombres = []
+        perfiles = []
+
+        for row in datos:
+            respuestas = [row[f"r{i}"] for i in range(1, 8)]
+            texto = " ".join(respuestas)
+            textos.append(texto)
+            correos.append(row["correo"])
+            nombres.append(row["nombre"])
+            perfiles.append(row["perfil_ia"])
+
+        vectores = vectorizer_ia.transform(textos)
+        sim_matrix = cosine_similarity(vectores)
+
+        idx = correos.index(correo)
+        similitudes = sim_matrix[idx]
+        mejores = np.argsort(similitudes)[::-1]
+
+        for i in mejores:
+            if i != idx:
+                correo_match = correos[i]
+                # Evita duplicado
+                ya_hay = conn.execute('''
+                    SELECT * FROM conexion_alfa_matches
+                    WHERE (correo_1 = ? AND correo_2 = ?) OR (correo_1 = ? AND correo_2 = ?)
+                ''', (correo, correo_match, correo_match, correo)).fetchone()
+                
+                if not ya_hay:
+                    conn.execute('''
+                        INSERT INTO conexion_alfa_matches (correo_1, correo_2, nombre_1, nombre_2, perfil_1, perfil_2)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    ''', (
+                        correo, correo_match,
+                        nombres[idx], nombres[i],
+                        perfiles[idx], perfiles[i]
+                    ))
+                    conn.commit()
+                    break
+
+        # Obtener el match recién insertado
+        match = conn.execute('''
+            SELECT * FROM conexion_alfa_matches
+            WHERE correo_1 = ? OR correo_2 = ?
+            LIMIT 1
+        ''', (correo, correo)).fetchone()
+
+    conn.close()
 
     return render_template('conexion_alfa_match.html', match=match)
 
