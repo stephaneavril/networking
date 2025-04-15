@@ -496,6 +496,52 @@ def ver_fotos_reto_foto():
         ya_voto=(votos_previos > 0),
         reto_nombre=reto_nombre
     )
+@app.route('/ver_fotos_mi6_v1')
+@app.route('/ver_fotos_mi6_v2')
+@app.route('/ver_fotos_mi6_v3')
+def ver_fotos_mi6():
+    if 'correo' not in session:
+        return redirect('/login')
+
+    ruta = request.path.strip("/")
+    nombre_reto = {
+        "ver_fotos_mi6_v1": "MI6 v1",
+        "ver_fotos_mi6_v2": "MI6 v2",
+        "ver_fotos_mi6_v3": "MI6 v3"
+    }.get(ruta)
+
+    if not nombre_reto:
+        return "❌ Ruta inválida", 404
+
+    conn = get_db_connection()
+    reto = conn.execute("SELECT * FROM retos WHERE nombre = ?", (nombre_reto,)).fetchone()
+
+    if not reto:
+        conn.close()
+        return "❌ El reto no existe en la base de datos", 500
+
+    reto_id = reto["id"]
+    correo = session["correo"]
+    fotos = conn.execute("SELECT * FROM reto_foto WHERE reto_id = ?", (reto_id,)).fetchall()
+
+    # Revisión de votos
+    fotos_ids = [f["id"] for f in fotos]
+    votos = conn.execute(
+        "SELECT * FROM votos_reto_foto WHERE correo_votante = ? AND id_foto IN (%s)" % ",".join("?" * len(fotos_ids)),
+        [correo] + fotos_ids if fotos_ids else [correo]
+    ).fetchall() if fotos_ids else []
+
+    votos_previos = len(votos)
+    votos_dict = {v['id_foto']: v['puntos'] for v in votos}
+    conn.close()
+
+    return render_template(
+        "ver_fotos_reto_foto.html",
+        fotos=fotos,
+        votos=votos_dict,
+        ya_voto=(votos_previos > 0),
+        reto_nombre=nombre_reto
+    )
 
 @app.route('/votar_fotos', methods=['POST'])
 def votar_fotos():

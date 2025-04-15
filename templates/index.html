@@ -119,6 +119,18 @@
     <h3>{{ reto.nombre }}</h3>
   </div>
 {% endfor %}
+<div class="card" onclick="location.href='/ver_fotos_mi6_v1'">
+  <div class="badge">📸</div>
+  <h3>Votar MI6 v1</h3>
+</div>
+<div class="card" onclick="location.href='/ver_fotos_mi6_v2'">
+  <div class="badge">🤝</div>
+  <h3>Votar MI6 v2</h3>
+</div>
+<div class="card" onclick="location.href='/ver_fotos_mi6_v3'">
+  <div class="badge">🗣️</div>
+  <h3>Votar MI6 v3</h3>
+</div>  
 
     <div class="card" onclick="location.href='{{ url_for('ranking_adivina') }}'">
       <div class="badge">👑</div>
