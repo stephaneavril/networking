@@ -533,6 +533,28 @@ def ver_fotos_mi6():
 
     votos_previos = len(votos)
     votos_dict = {v['id_foto']: v['puntos'] for v in votos}
+  # ✅ ✅ ✅ PEGA AQUÍ ESTE BLOQUE
+    if request.method == 'POST' and votos_previos == 0:
+        total_puntos = sum(int(v) for v in request.form.values() if v.isdigit())
+        if total_puntos > 3:
+            conn.close()
+            return "❌ Solo puedes asignar hasta 3 puntos en total.", 400
+
+        for key, val in request.form.items():
+            if key.startswith("foto_") and val:
+                id_foto = int(key.split("_")[1])
+                puntos = int(val)
+                try:
+                    conn.execute(
+                        "INSERT INTO votos_reto_foto (correo_votante, id_foto, puntos) VALUES (?, ?, ?)",
+                        (correo, id_foto, puntos)
+                    )
+                except sqlite3.IntegrityError:
+                    continue
+        conn.commit()
+        flash("✅ ¡Tus votos han sido registrados!")
+        return redirect(request.path)
+
     conn.close()
 
     return render_template(
