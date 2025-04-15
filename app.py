@@ -832,63 +832,48 @@ def api_conexion_alfa_match():
     if not participantes or len(participantes) < 2:
         return jsonify({"error": "No hay suficientes participantes"}), 400
 
-    textos = []
-    correos = []
-    nombres = []
-    perfiles = []
+    textos, correos, nombres, perfiles = [], [], [], []
 
     for p in participantes:
-        respuestas = [p.get(f"r{i}", "") or "" for i in range(1, 13)]
-        texto = " ".join(respuestas)
-        textos.append(texto)
+        # 🔍 Solo las primeras 7 preguntas
+        respuestas = [p.get(f"r{i}", "") or "" for i in range(1, 8)]
+        textos.append(" ".join(respuestas))
         correos.append(p["correo"])
         nombres.append(p["nombre"])
         perfiles.append(p.get("perfil_ia", ""))
 
-    vectores = vectorizer_ia.transform(textos)
-    sim_matrix = cosine_similarity(vectores)
+    vectores = vectorizer_ia.transform(textos).toarray()
 
-    ya_pareados = set()
+    usados = set()
     matches = []
 
     for i in range(len(correos)):
-        if correos[i] in ya_pareados:
+        if i in usados:
             continue
 
         mejor_j = None
         mejor_sim = -1
 
-        for j in range(len(correos)):
-            if i == j or correos[j] in ya_pareados:
+        for j in range(i + 1, len(correos)):
+            if j in usados:
                 continue
-
-            sim = sim_matrix[i][j]
+            sim = cosine_similarity([vectores[i]], [vectores[j]])[0][0]
             if sim > mejor_sim:
                 mejor_sim = sim
                 mejor_j = j
 
         if mejor_j is not None:
-            i1, i2 = i, mejor_j
-            correo_1 = correos[i1]
-            correo_2 = correos[i2]
-            nombre_1 = nombres[i1]
-            nombre_2 = nombres[i2]
-            perfil_1 = perfiles[i1]
-            perfil_2 = perfiles[i2]
-            razon = f"Ambos tienen afinidades destacadas: {round(mejor_sim * 100)}% de coincidencia según sus respuestas."
-
             matches.append({
-                "correo_1": correo_1,
-                "correo_2": correo_2,
-                "nombre_1": nombre_1,
-                "nombre_2": nombre_2,
-                "perfil_1": perfil_1,
-                "perfil_2": perfil_2,
-                "razon": razon
+                "correo_1": correos[i],
+                "correo_2": correos[mejor_j],
+                "nombre_1": nombres[i],
+                "nombre_2": nombres[mejor_j],
+                "perfil_1": perfiles[i],
+                "perfil_2": perfiles[mejor_j],
+                "razon": f"Coincidencia rápida: {round(mejor_sim * 100)}% de similitud basada en respuestas clave."
             })
-
-            ya_pareados.add(correo_1)
-            ya_pareados.add(correo_2)
+            usados.add(i)
+            usados.add(mejor_j)
 
     return jsonify({"matches": matches})
 
