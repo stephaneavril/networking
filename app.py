@@ -517,7 +517,7 @@ def ver_fotos_mi6():
     reto = conn.execute("SELECT * FROM retos WHERE nombre = ?", (nombre_reto,)).fetchone()
 
     if not reto:
-        conn.close()
+        conn.c@lose()
         return "❌ El reto no existe en la base de datos", 500
 
     reto_id = reto["id"]
@@ -592,14 +592,18 @@ def ranking_fotos():
 
     conn = get_db_connection()
 
-    # Obtener el reto activo tipo individual que sea de foto (Reto Foto o MI6)
-    reto = conn.execute('''
-        SELECT * FROM retos
-        WHERE tipo = 'individual' AND activo = 1
-        AND (nombre = 'Reto Foto' OR nombre LIKE 'MI6%')
-        ORDER BY id ASC
-        LIMIT 1
-    ''').fetchone()
+    nombre_reto = request.args.get("reto")
+
+    if nombre_reto:
+        reto = conn.execute("SELECT * FROM retos WHERE nombre = ?", (nombre_reto,)).fetchone()
+    else:
+        reto = conn.execute('''
+            SELECT * FROM retos
+            WHERE tipo = 'individual' AND activo = 1
+            AND (nombre = 'Reto Foto' OR nombre LIKE 'MI6%')
+            ORDER BY id ASC
+            LIMIT 1
+        ''').fetchone()
 
     if not reto:
         conn.close()

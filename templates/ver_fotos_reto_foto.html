@@ -61,7 +61,11 @@
 </head>
 <body>
   <h1>📸 Vota en {{ reto_nombre }}</h1>
-  <p style="text-align: center;">
+  <div style="text-align: center; margin-top: 20px;">
+    <p>Tienes 3 puntos en total. Puedes darlos todos a una sola foto o repartirlos.</p>
+    <a href="{{ url_for('ranking_fotos') }}?reto={{ reto_nombre }}" style="color: #ec1c24; text-decoration: underline;">🔝 Ver Ranking de este reto</a>
+  </div>
+    
     Tienes 3 puntos en total. Puedes darlos todos a una sola foto o repartirlos.
   </p>
 
