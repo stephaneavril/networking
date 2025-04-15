@@ -24,10 +24,16 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-# 🔮 IA: Generar perfil semántico
 def generar_perfil_ia(nombre, respuestas):
-    texto = f"{nombre} es alguien que {respuestas[0]}, le encanta {respuestas[1]}, sueña con {respuestas[2]}, y nunca diría que no a {respuestas[3]}. En su tiempo libre, {respuestas[4]}. Su estilo se define como {respuestas[5]}. Le gustaría {respuestas[6]}."
-    return texto
+    frases = [
+        f"{nombre} es una persona que destaca por su habilidad de '{respuestas[0]}'.",
+        f"Le apasiona '{respuestas[1]}' y tiene un dato curioso: '{respuestas[2]}'.",
+        f"Su película favorita es '{respuestas[3]}' y admira a '{respuestas[4]}'.",
+        f"No puede soportar '{respuestas[5]}'.",
+        f"Uno de sus libros favoritos es '{respuestas[6]}' y considera imprescindible '{respuestas[7]}'.",
+        f"El mejor concierto que ha vivido fue '{respuestas[8]}'.",
+    ]
+    return " ".join(frases)
 
 @app.before_request
 def make_session_permanent():
@@ -771,29 +777,37 @@ def subir_video_match():
     conn = get_db_connection()
     match = conn.execute('''
         SELECT * FROM conexion_alfa_matches 
-        WHERE correo_1 = ? OR correo_2 = ?
+        WHERE (correo_1 = ? OR correo_2 = ?) AND evidencia IS NULL
+        LIMIT 1
     ''', (correo, correo)).fetchone()
 
     if not match:
         conn.close()
-        flash("❌ No tienes un match asignado.")
-        return redirect('/')
+        flash("❌ Ya subieron el video o no tienes un match asignado.")
+        return redirect('/conexion_alfa_match')
 
     if request.method == 'POST':
         archivo = request.files.get('video')
-        if archivo:
+        if archivo and archivo.filename.lower().endswith(('.mp4', '.mov', '.avi', '.mkv')):
             nombre_archivo = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{archivo.filename}"
-            ruta = os.path.join('static/evidencias_alfa', nombre_archivo)
-            archivo.save(ruta)
-
-            conn.execute('''
-                UPDATE conexion_alfa_matches
-                SET evidencia = ?
-                WHERE id = ?
-            ''', (nombre_archivo, match['id']))
-            conn.commit()
-            flash("✅ Video subido exitosamente.")
-            return redirect('/conexion_alfa_mi_perfil')
+            carpeta = os.path.join('static', 'evidencias_alfa')
+            os.makedirs(carpeta, exist_ok=True)
+            ruta = os.path.join(carpeta, nombre_archivo)
+            
+            try:
+                archivo.save(ruta)
+                conn.execute('''
+                    UPDATE conexion_alfa_matches
+                    SET evidencia = ?
+                    WHERE id = ?
+                ''', (nombre_archivo, match['id']))
+                conn.commit()
+                flash("✅ Video subido exitosamente.")
+                return redirect('/conexion_alfa_match')
+            except Exception as e:
+                flash(f"❌ Error al guardar el video: {e}")
+        else:
+            flash("❌ Formato de video no válido. Usa mp4, mov, avi o mkv.")
     
     conn.close()
     return render_template('conexion_alfa_subir_video.html', match=match)
@@ -895,39 +909,61 @@ def generar_matches_conexion_alfa():
     perfiles = []
 
     for row in datos:
-        respuestas = [row[f"r{i}"] for i in range(1, 8)]
+        respuestas = [row[f"r{i}"] for i in range(1, 13)]  # ahora de r1 a r12
         texto = " ".join(respuestas)
         textos.append(texto)
         correos.append(row["correo"])
         nombres.append(row["nombre"])
         perfiles.append(row["perfil_ia"])
 
+    if not textos:
+        conn.close()
+        flash("❌ No hay suficientes participantes para generar matches.")
+        return redirect('/admin_panel')
+
     vectores = vectorizer_ia.transform(textos)
     sim_matrix = cosine_similarity(vectores)
 
-    # Evitar duplicados
+    # Evitar duplicados ya existentes
     ya_guardados = conn.execute("SELECT correo_1, correo_2 FROM conexion_alfa_matches").fetchall()
     ya_guardados_set = set((min(r["correo_1"], r["correo_2"]), max(r["correo_1"], r["correo_2"])) for r in ya_guardados)
 
     nuevos_matches = 0
+    emparejados = set()  # para evitar que una persona tenga más de un match
 
     for i in range(len(correos)):
-        for j in range(i + 1, len(correos)):
-            correo1, correo2 = correos[i], correos[j]
-            nombre1, nombre2 = nombres[i], nombres[j]
-            perfil1, perfil2 = perfiles[i], perfiles[j]
-            pareja = (min(correo1, correo2), max(correo1, correo2))
+        if correos[i] in emparejados:
+            continue
 
-            if pareja not in ya_guardados_set:
-                conn.execute('''
-                    INSERT INTO conexion_alfa_matches (correo_1, correo_2, nombre_1, nombre_2, perfil_1, perfil_2)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                ''', (correo1, correo2, nombre1, nombre2, perfil1, perfil2))
-                nuevos_matches += 1
+        mejor_j = None
+        mejor_sim = -1
+        for j in range(len(correos)):
+            if i == j or correos[j] in emparejados:
+                continue
+            pareja = (min(correos[i], correos[j]), max(correos[i], correos[j]))
+            if pareja in ya_guardados_set:
+                continue
+            sim = sim_matrix[i][j]
+            if sim > mejor_sim:
+                mejor_sim = sim
+                mejor_j = j
+
+        if mejor_j is not None:
+            correo1, correo2 = correos[i], correos[mejor_j]
+            nombre1, nombre2 = nombres[i], nombres[mejor_j]
+            perfil1, perfil2 = perfiles[i], perfiles[mejor_j]
+            pareja = (min(correo1, correo2), max(correo1, correo2))
+            conn.execute('''
+                INSERT INTO conexion_alfa_matches (correo_1, correo_2, nombre_1, nombre_2, perfil_1, perfil_2)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (correo1, correo2, nombre1, nombre2, perfil1, perfil2))
+            ya_guardados_set.add(pareja)
+            emparejados.update([correo1, correo2])
+            nuevos_matches += 1
 
     conn.commit()
 
-    # Métricas
+    # Métricas IA
     feedbacks = conn.execute("SELECT feedback FROM conexion_alfa_matches WHERE feedback IS NOT NULL").fetchall()
     total = len(feedbacks)
     positivos = sum(f["feedback"] == 1 for f in feedbacks)
