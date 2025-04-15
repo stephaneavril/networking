@@ -938,7 +938,12 @@ def generar_matches_conexion_alfa():
         endpoint_ia = 'https://networking-sxxt.onrender.com/api/conexion_alfa_match'
 
         print("📤 Enviando datos al endpoint IA:", endpoint_ia)
-        response = requests.post(endpoint_ia, json={"participantes": participantes})
+        try:
+            response = requests.post(endpoint_ia, json={"participantes": participantes}, timeout=10)
+        except requests.exceptions.RequestException as e:
+            print("❌ Error de conexión con el endpoint IA:", str(e))
+            flash("❌ No se pudo conectar con el servicio de IA. Intenta más tarde.")
+            return redirect('/admin_panel')
 
         print("🌐 Código de respuesta:", response.status_code)
         print("📦 Respuesta JSON:", response.text)
