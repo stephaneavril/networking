@@ -20,21 +20,40 @@
       background: #ec1c24; color: white; padding: 10px 20px;
       border: none; border-radius: 6px; cursor: pointer;
     }
+    .info {
+      background: #2b2d4f;
+      padding: 15px;
+      margin: 20px auto;
+      border-radius: 10px;
+      max-width: 600px;
+      color: #ccc;
+      font-size: 0.95em;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
   <h1>🔗 Tu Conexión Alfa</h1>
-  {% if match %}
+
+  {% if sin_match %}
+    <div class="info">
+      ⚠️ Actualmente no tienes una conexión asignada. Serás emparejado/a en cuanto haya otro participante disponible.
+    </div>
+  {% elif match %}
     <div class="card">
       <h3><strong>{{ match['nombre_1'] }}</strong> 🤝 <strong>{{ match['nombre_2'] }}</strong></h3>
       <div class="perfil">{{ match['perfil_1'] }}</div>
       <div class="perfil">{{ match['perfil_2'] }}</div>
 
+      <div class="info">
+        🎯 El video debe mostrar cómo este match puede aportar al liderazgo dentro de la compañía, destacando algún valor de Alfasigma.
+      </div>
+
       {% if not match['evidencia'] %}
-      <form method="POST" action="/subir_video_match" enctype="multipart/form-data">
-        <input type="hidden" name="match_id" value="{{ match['id'] }}">
+        <form method="POST" action="/subir_video_match" enctype="multipart/form-data">
+          <input type="hidden" name="match_id" value="{{ match['id'] }}">
           <label>Sube tu video conjunto:</label>
-          <input type="file" name="evidencia" accept="video/*" required>
+          <input type="file" name="video" accept="video/*" required>
           <button type="submit">📤 Enviar evidencia</button>
         </form>
       {% else %}
@@ -42,7 +61,7 @@
       {% endif %}
     </div>
   {% else %}
-    <p>No se ha generado aún un match para ti.</p>
+    <p style="text-align: center; color: #ccc;">❌ No se ha generado aún un match para ti.</p>
   {% endif %}
 </body>
 </html>

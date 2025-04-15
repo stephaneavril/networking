@@ -805,62 +805,78 @@ def conexion_alfa_match():
     correo = session['correo']
     conn = get_db_connection()
 
+    # Verificar si ya tiene match
+    match = conn.execute('''
+        SELECT * FROM conexion_alfa_matches 
+        WHERE correo_1 = ? OR correo_2 = ?
+    ''', (correo, correo)).fetchone()
+
+    if match:
+        conn.close()
+        return render_template("conexion_alfa_match.html", match=match, sin_match=False)
+
+    # Obtener respuestas para generar match si no lo tiene aún
     datos = conn.execute("SELECT * FROM conexion_alfa_respuestas").fetchall()
 
-    if not datos:
+    if not datos or len(datos) < 2:
         conn.close()
-        return "❌ Aún no hay suficientes datos para hacer matching."
+        return render_template("conexion_alfa_match.html", match=None, sin_match=True)
 
-    # Procesar textos para vectorización
-    textos = [" ".join([d[f"r{i}"] for i in range(1, 8)]) for d in datos]
+    textos = [" ".join([d[f"r{i}"] for i in range(1, 13)]) for d in datos]
     correos = [d["correo"] for d in datos]
+    nombres = [d["nombre"] for d in datos]
+    perfiles = [d["perfil_ia"] for d in datos]
+
+    # Verificar que el usuario tiene respuestas
+    if correo not in correos:
+        conn.close()
+        return "❌ No tienes respuestas registradas."
 
     vectores = vectorizer_ia.transform(textos)
     sim_matrix = cosine_similarity(vectores)
 
-    # Buscar el índice del usuario actual
-    try:
-        idx_actual = correos.index(correo)
-    except ValueError:
-        conn.close()
-        return "❌ No tienes respuestas registradas."
-
+    idx_actual = correos.index(correo)
     similitudes = sim_matrix[idx_actual]
-    similitudes[idx_actual] = -1  # evitar matching contigo mismo
-    mejor_idx = similitudes.argmax()
+    similitudes[idx_actual] = -1  # evitar matching consigo mismo
 
-    # Crear o buscar el match
-    correo_1 = min(correo, correos[mejor_idx])
-    correo_2 = max(correo, correos[mejor_idx])
+    # Buscar mejor pareja disponible
+    mejor_idx = None
+    mejor_sim = -1
+    for j, sim in enumerate(similitudes):
+        if correos[j] == correo:
+            continue
+        ya_match = conn.execute('''
+            SELECT * FROM conexion_alfa_matches
+            WHERE (correo_1 = ? AND correo_2 = ?) OR (correo_1 = ? AND correo_2 = ?)
+        ''', (correo, correos[j], correos[j], correo)).fetchone()
+        if not ya_match and sim > mejor_sim:
+            mejor_sim = sim
+            mejor_idx = j
 
-    ya_guardado = conn.execute('''
-        SELECT * FROM conexion_alfa_matches
-        WHERE (correo_1 = ? AND correo_2 = ?)
-    ''', (correo_1, correo_2)).fetchone()
+    if mejor_idx is not None:
+        correo_1 = min(correo, correos[mejor_idx])
+        correo_2 = max(correo, correos[mejor_idx])
+        nombre_1 = nombres[correos.index(correo_1)]
+        nombre_2 = nombres[correos.index(correo_2)]
+        perfil_1 = perfiles[correos.index(correo_1)]
+        perfil_2 = perfiles[correos.index(correo_2)]
 
-    if not ya_guardado:
-        nombre_1 = datos[idx_actual]["nombre"]
-        nombre_2 = datos[mejor_idx]["nombre"]
-        perfil_1 = datos[idx_actual]["perfil_ia"]
-        perfil_2 = datos[mejor_idx]["perfil_ia"]
         conn.execute('''
             INSERT INTO conexion_alfa_matches (correo_1, correo_2, nombre_1, nombre_2, perfil_1, perfil_2)
             VALUES (?, ?, ?, ?, ?, ?)
         ''', (correo_1, correo_2, nombre_1, nombre_2, perfil_1, perfil_2))
         conn.commit()
 
-    match = conn.execute('''
-        SELECT * FROM conexion_alfa_matches
-        WHERE correo_1 = ? OR correo_2 = ?
-        LIMIT 1
-    ''', (correo, correo)).fetchone()
-
+        match = conn.execute('''
+            SELECT * FROM conexion_alfa_matches 
+            WHERE correo_1 = ? OR correo_2 = ?
+        ''', (correo, correo)).fetchone()
+        conn.close()
+        return render_template("conexion_alfa_match.html", match=match, sin_match=False)
+    
     conn.close()
-
-    if not match:
-        return "❌ No se encontró ningún match."
-
-    return render_template('conexion_alfa_match.html', match=match)
+    # No se encontró una pareja disponible
+    return render_template("conexion_alfa_match.html", match=None, sin_match=True)
 
 @app.route('/reset_conexion_alfa', methods=['POST'])
 def reset_conexion_alfa():
@@ -899,7 +915,7 @@ def generar_matches_conexion_alfa():
     perfiles = []
 
     for row in datos:
-        respuestas = [row[f"r{i}"] for i in range(1, 13)]
+        respuestas = [row.get(f"r{i}", "") or "" for i in range(1, 13)]
         texto = " ".join(respuestas)
         textos.append(texto)
         correos.append(row["correo"])
@@ -909,11 +925,12 @@ def generar_matches_conexion_alfa():
     vectores = vectorizer_ia.transform(textos)
     sim_matrix = cosine_similarity(vectores)
 
+    # Cargar matches ya existentes
     ya_guardados = conn.execute("SELECT correo_1, correo_2 FROM conexion_alfa_matches").fetchall()
     ya_guardados_set = set((min(r["correo_1"], r["correo_2"]), max(r["correo_1"], r["correo_2"])) for r in ya_guardados)
 
-    nuevos_matches = 0
     ya_pareados = set()
+    nuevos_matches = 0
 
     for i in range(len(correos)):
         if correos[i] in ya_pareados:
@@ -942,10 +959,10 @@ def generar_matches_conexion_alfa():
                     INSERT INTO conexion_alfa_matches (correo_1, correo_2, nombre_1, nombre_2, perfil_1, perfil_2)
                     VALUES (?, ?, ?, ?, ?, ?)
                 ''', (correo1, correo2, nombre1, nombre2, perfil1, perfil2))
-                nuevos_matches += 1
                 ya_guardados_set.add(pareja)
                 ya_pareados.add(correo1)
                 ya_pareados.add(correo2)
+                nuevos_matches += 1
 
     conn.commit()
     conn.close()
@@ -983,6 +1000,22 @@ def eliminar_todos_los_jugadores():
     session.clear()  # Limpiar sesión activa
     flash("✅ Se eliminaron todos los jugadores, respuestas y sesiones.")
     return redirect('/admin_panel')
+
+@app.route('/feedback_match', methods=['POST'])
+def feedback_match():
+    if 'correo' not in session:
+        return redirect('/login')
+
+    feedback = int(request.form.get('feedback'))
+    match_id = int(request.form.get('match_id'))
+
+    conn = get_db_connection()
+    conn.execute("UPDATE conexion_alfa_matches SET feedback = ? WHERE id = ?", (feedback, match_id))
+    conn.commit()
+    conn.close()
+    
+    flash("✅ Gracias por tu feedback sobre la conexión.")
+    return redirect("/conexion_alfa_match")
 
 # -------------------- RUN --------------------
 if __name__ == '__main__':
