@@ -71,7 +71,7 @@
     </p>
   {% endif %}
 
-  <form method="POST">
+  <form method="POST" action="{{ request.path }}">
     {% for foto in fotos %}
       <div class="foto-card">
         <img src="{{ url_for('static', filename='fotos_reto_foto/' ~ foto.archivo) }}" alt="Foto participante">
