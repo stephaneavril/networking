@@ -496,9 +496,9 @@ def ver_fotos_reto_foto():
         ya_voto=(votos_previos > 0),
         reto_nombre=reto_nombre
     )
-@app.route('/ver_fotos_mi6_v1')
-@app.route('/ver_fotos_mi6_v2')
-@app.route('/ver_fotos_mi6_v3')
+@app.route('/ver_fotos_mi6_v1', methods=['GET', 'POST'])
+@app.route('/ver_fotos_mi6_v2', methods=['GET', 'POST'])
+@app.route('/ver_fotos_mi6_v3', methods=['GET', 'POST'])
 def ver_fotos_mi6():
     if 'correo' not in session:
         return redirect('/login')
