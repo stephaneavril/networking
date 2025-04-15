@@ -25,6 +25,7 @@
 
     th {
       background-color: #ec1c24;
+      color: white;
     }
 
     tr.highlight {
@@ -46,9 +47,7 @@
       <tr>
         <th>Posición</th>
         <th>Nombre</th>
-        <th>Aciertos</th>
-        <th>Bonus</th>
-        <th>Total</th>
+        <th>Puntaje Final</th>
       </tr>
     </thead>
     <tbody>
@@ -56,8 +55,6 @@
       <tr {% if r['nombre_jugador'] == mi_resultado['nombre_jugador'] %}class="highlight"{% endif %}>
         <td>{{ loop.index }}</td>
         <td>{{ r['nombre_jugador'] }}</td>
-        <td>{{ r['aciertos'] }}</td>
-        <td>{{ r['puntos_extra'] - (r['aciertos'] * 3) }}</td>
         <td>{{ r['puntos_extra'] }}</td>
       </tr>
       {% endfor %}

@@ -144,14 +144,10 @@ def adivina_finalizado():
 
     data = request.get_json()
     jugador = session['jugador']
-    aciertos = data.get("aciertos")
-    fallos = data.get("fallos", 0)
     puntaje = data.get("puntaje", 0)
 
-    if not isinstance(aciertos, int):
+    if not isinstance(puntaje, int):
         return jsonify({"error": "Datos inválidos"}), 400
-
-    total_final = puntaje
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -161,12 +157,12 @@ def adivina_finalizado():
         return jsonify({"error": "Ya has completado el reto"}), 400
 
     cursor.execute("INSERT INTO adivina_resultados (nombre_jugador, aciertos, puntos_extra) VALUES (?, ?, ?)",
-                   (jugador, aciertos, total_final))
+                   (jugador, 0, puntaje))
     conn.commit()
     conn.close()
 
     return jsonify({
-        "message": f"🎉 ¡Reto completado! {jugador} ganó {total_final} puntos ({aciertos} aciertos, {fallos} errores).",
+        "message": f"🎉 ¡Reto completado! {jugador} obtuvo {puntaje} puntos.",
         "redirect": "/ranking_adivina"
     })
 
@@ -176,7 +172,7 @@ def ranking_adivina():
         return redirect('/login')
     conn = get_db_connection()
     resultados = conn.execute('''
-        SELECT nombre_jugador, aciertos, puntos_extra, timestamp
+        SELECT nombre_jugador, puntos_extra, timestamp
         FROM adivina_resultados
         ORDER BY puntos_extra DESC, timestamp ASC
     ''').fetchall()
