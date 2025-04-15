@@ -303,13 +303,23 @@ def guardar_reto_grupal():
 @app.route('/admin_panel', methods=['GET', 'POST'])
 def admin_panel():
     conn = get_db_connection()
-    
+
     # Activar/desactivar retos
     if request.method == 'POST':
-        reto_id = request.form.get('reto_id')
-        nuevo_estado = request.form.get('activo')
-        conn.execute("UPDATE retos SET activo = ? WHERE id = ?", (nuevo_estado, reto_id))
-        conn.commit()
+        if 'activar_solo' in request.form:
+            # 🔁 Nueva opción: activar solo un reto MI6 o Reto Foto
+            id_a_activar = int(request.form['activar_solo'])
+            conn.execute("UPDATE retos SET activo = 0 WHERE nombre LIKE 'MI6%' OR nombre = 'Reto Foto'")
+            conn.execute("UPDATE retos SET activo = 1 WHERE id = ?", (id_a_activar,))
+            conn.commit()
+            flash("✅ Se activó solo ese reto MI6.")
+        elif 'reto_id' in request.form and 'activo' in request.form:
+            # Activación/desactivación tradicional
+            reto_id = request.form.get('reto_id')
+            nuevo_estado = request.form.get('activo')
+            conn.execute("UPDATE retos SET activo = ? WHERE id = ?", (nuevo_estado, reto_id))
+            conn.commit()
+            flash("✅ Estado del reto actualizado correctamente.")
 
     # Cargar datos necesarios
     retos = conn.execute("SELECT * FROM retos").fetchall()
@@ -338,33 +348,85 @@ def calificar(id):
     conn.close()
     return redirect('/admin_panel')
 
-# -------------------- RETO FOTO --------------------
+# -------------------- RETOS FOTO Y MI6 --------------------
+
+def get_reto_id(nombre_reto):
+    conn = get_db_connection()
+    resultado = conn.execute("SELECT id FROM retos WHERE nombre = ?", (nombre_reto,)).fetchone()
+    conn.close()
+    return resultado["id"] if resultado else None
+
 @app.route('/reto_foto', methods=['GET', 'POST'])
+@app.route('/reto_mi6_v1', methods=['GET', 'POST'])
+@app.route('/reto_mi6_v2', methods=['GET', 'POST'])
+@app.route('/reto_mi6_v3', methods=['GET', 'POST'])
 def reto_foto():
     if 'jugador' not in session:
         return redirect('/login')
+
+    ruta = request.path.strip("/")
+
+    # Definir información para cada reto
+    config = {
+        "reto_foto": {
+            "nombre_reto": "Reto Foto",
+            "mensaje": "Sube una foto original que represente tu creatividad. Esta será votada por los demás participantes."
+        },
+        "reto_mi6_v1": {
+            "nombre_reto": "MI6 v1",
+            "mensaje": "📸 Toma una foto que represente cómo haces lo correcto incluso cuando nadie está mirando. Una imagen de integridad, valentía o esfuerzo extra."
+        },
+        "reto_mi6_v2": {
+            "nombre_reto": "MI6 v2",
+            "mensaje": "🤝 Captura un momento donde el trabajo en equipo brilla. Tu foto debe mostrar colaboración, apoyo mutuo o espíritu de equipo."
+        },
+        "reto_mi6_v3": {
+            "nombre_reto": "MI6 v3",
+            "mensaje": "🗣️ Muéstranos cómo la comunicación clara hace la diferencia. Una imagen que represente claridad, conexión o entendimiento efectivo."
+        }
+    }
+
+    datos_reto = config.get(ruta)
+    if not datos_reto:
+        return "❌ Ruta no válida", 404
+
+    reto_id = get_reto_id(datos_reto["nombre_reto"])
+    if reto_id is None:
+        return "❌ El reto no existe en la base de datos", 500
+
     conn = get_db_connection()
     correo = session['correo']
-    ya_existe = conn.execute("SELECT * FROM reto_foto WHERE correo = ?", (correo,)).fetchone()
+    ya_existe = conn.execute(
+        "SELECT * FROM reto_foto WHERE correo = ? AND reto_id = ?",
+        (correo, reto_id)
+    ).fetchone()
+
     if request.method == 'POST':
         if ya_existe:
             conn.close()
             return "❌ Ya has subido una foto para este reto."
+
         archivo = request.files.get('foto')
         if not archivo:
             return "❌ No se proporcionó ninguna imagen."
+
         nombre = session['jugador']
         filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{archivo.filename}"
         path = os.path.join('static/fotos_reto_foto', filename)
         os.makedirs('static/fotos_reto_foto', exist_ok=True)
         archivo.save(path)
-        conn.execute("INSERT INTO reto_foto (correo, nombre, archivo) VALUES (?, ?, ?)", (correo, nombre, filename))
+
+        conn.execute(
+            "INSERT INTO reto_foto (correo, nombre, archivo, reto_id) VALUES (?, ?, ?, ?)",
+            (correo, nombre, filename, reto_id)
+        )
         conn.commit()
         conn.close()
         flash("✅ Foto subida con éxito. ¡Gracias por participar!")
         return redirect('/')
+
     conn.close()
-    return render_template("reto_foto.html", ya_existe=ya_existe)
+    return render_template("reto_foto.html", ya_existe=ya_existe, mensaje=datos_reto["mensaje"])
 
 @app.route('/ver_fotos_reto_foto', methods=['GET', 'POST'])
 def ver_fotos_reto_foto():
@@ -374,11 +436,30 @@ def ver_fotos_reto_foto():
     correo = session['correo']
     conn = get_db_connection()
 
-    # Verifica si ya votó
-    votos_previos = conn.execute(
-        "SELECT COUNT(*) FROM votos_reto_foto WHERE correo_votante = ?", (correo,)
-    ).fetchone()[0]
+    # Obtener el reto activo del tipo 'individual' que se llame MI6 o Reto Foto
+    reto = conn.execute('''
+        SELECT * FROM retos
+        WHERE tipo = 'individual' AND activo = 1
+        AND (nombre = 'Reto Foto' OR nombre LIKE 'MI6%')
+        ORDER BY id ASC
+        LIMIT 1
+    ''').fetchone()
 
+    if not reto:
+        conn.close()
+        return "❌ No hay ningún reto de foto activo en este momento."
+
+    reto_id = reto["id"]
+    reto_nombre = reto["nombre"]
+
+    # Verificar si el usuario ya votó en este reto
+    fotos_ids = [row["id"] for row in conn.execute("SELECT * FROM reto_foto WHERE reto_id = ?", (reto_id,)).fetchall()]
+    votos_previos = conn.execute(
+        "SELECT COUNT(*) FROM votos_reto_foto WHERE correo_votante = ? AND id_foto IN (%s)" % ",".join("?"*len(fotos_ids)),
+        [correo] + fotos_ids
+    ).fetchone()[0] if fotos_ids else 0
+
+    # Procesar votos
     if request.method == 'POST' and votos_previos == 0:
         total_puntos = sum(int(v) for v in request.form.values() if v.isdigit())
         if total_puntos > 3:
@@ -400,8 +481,11 @@ def ver_fotos_reto_foto():
         flash("✅ ¡Tus votos han sido registrados!")
         return redirect('/ver_fotos_reto_foto')
 
-    fotos = conn.execute("SELECT * FROM reto_foto").fetchall()
-    votos = conn.execute("SELECT * FROM votos_reto_foto WHERE correo_votante = ?", (correo,)).fetchall()
+    fotos = conn.execute("SELECT * FROM reto_foto WHERE reto_id = ?", (reto_id,)).fetchall()
+    votos = conn.execute(
+        "SELECT * FROM votos_reto_foto WHERE correo_votante = ?",
+        (correo,)
+    ).fetchall()
     votos_dict = {v['id_foto']: v['puntos'] for v in votos}
     conn.close()
 
@@ -409,8 +493,10 @@ def ver_fotos_reto_foto():
         "ver_fotos_reto_foto.html",
         fotos=fotos,
         votos=votos_dict,
-        ya_voto=(votos_previos > 0)
+        ya_voto=(votos_previos > 0),
+        reto_nombre=reto_nombre
     )
+
 @app.route('/votar_fotos', methods=['POST'])
 def votar_fotos():
     if 'correo' not in session:
@@ -435,27 +521,45 @@ def votar_fotos():
 def ranking_fotos():
     if 'jugador' not in session:
         return redirect('/login')
+
     conn = get_db_connection()
+
+    # Obtener el reto activo tipo individual que sea de foto (Reto Foto o MI6)
+    reto = conn.execute('''
+        SELECT * FROM retos
+        WHERE tipo = 'individual' AND activo = 1
+        AND (nombre = 'Reto Foto' OR nombre LIKE 'MI6%')
+        ORDER BY id ASC
+        LIMIT 1
+    ''').fetchone()
+
+    if not reto:
+        conn.close()
+        return "❌ No hay reto de foto activo en este momento."
+
+    reto_id = reto['id']
+    reto_nombre = reto['nombre']
+
     ranking = conn.execute('''
         SELECT nombre, archivo, SUM(puntos) as total_puntos
         FROM votos_reto_foto
         JOIN reto_foto ON votos_reto_foto.id_foto = reto_foto.id
+        WHERE reto_foto.reto_id = ?
         GROUP BY id_foto
         ORDER BY total_puntos DESC
-    ''').fetchall()
+    ''', (reto_id,)).fetchall()
+
     conn.close()
-    return render_template("ranking_fotos.html", ranking=ranking)
+    return render_template("ranking_fotos.html", ranking=ranking, reto_nombre=reto_nombre)
 
 @app.route('/reset_reto_foto', methods=['POST'])
 def reset_reto_foto():
-    # 1. Borrar registros de la base de datos
     conn = get_db_connection()
     conn.execute("DELETE FROM votos_reto_foto")
     conn.execute("DELETE FROM reto_foto")
     conn.commit()
     conn.close()
 
-    # 2. Borrar archivos de la carpeta
     carpeta = 'static/fotos_reto_foto'
     for archivo in os.listdir(carpeta):
         ruta = os.path.join(carpeta, archivo)

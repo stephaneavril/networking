@@ -67,20 +67,36 @@
 
 <!-- SECCIÓN 2: Activar / Desactivar Retos -->
 <h2>🔧 Activar / Desactivar Retos</h2>
+
 <table>
-  <tr><th>Nombre</th><th>Estado</th><th>Acción</th></tr>
+  <tr><th>Nombre</th><th>Descripción</th><th>Estado</th><th>Acción</th></tr>
   {% for reto in retos %}
-  <tr>
-    <td>{{ reto.nombre }}</td>
-    <td class="{{ 'activo' if reto.activo else 'inactivo' }}">{{ 'Activo' if reto.activo else 'Inactivo' }}</td>
-    <td>
-      <form method="POST" action="/admin_panel" style="display:inline;">
-        <input type="hidden" name="reto_id" value="{{ reto.id }}">
-        <input type="hidden" name="activo" value="{{ 0 if reto.activo else 1 }}">
-        <button type="submit">{{ 'Desactivar' if reto.activo else 'Activar' }}</button>
-      </form>
-    </td>
-  </tr>
+    {% set descripcion = (
+      'Día 1 - Hacer lo correcto' if reto.nombre == 'MI6 v1'
+      else 'Día 2 - Espíritu de equipo' if reto.nombre == 'MI6 v2'
+      else 'Día 3 - Comunicación clara' if reto.nombre == 'MI6 v3'
+      else ''
+    ) %}
+    <tr style="background-color: {{ '#182038' if not reto.activo else '#203d27' }};">
+      <td><strong>{{ reto.nombre }}</strong></td>
+      <td style="font-size: 0.9em;">{{ descripcion }}</td>
+      <td class="{{ 'activo' if reto.activo else 'inactivo' }}">
+        {{ '✅ Activo' if reto.activo else '❌ Inactivo' }}
+      </td>
+      <td>
+        <form method="POST" action="/admin_panel" style="display:inline;">
+          <input type="hidden" name="reto_id" value="{{ reto.id }}">
+          <input type="hidden" name="activo" value="{{ 0 if reto.activo else 1 }}">
+          <button type="submit">{{ 'Desactivar' if reto.activo else 'Activar' }}</button>
+        </form>
+        {% if 'MI6' in reto.nombre and not reto.activo %}
+          <form method="POST" action="/admin_panel" style="display:inline; margin-left: 5px;">
+            <input type="hidden" name="activar_solo" value="{{ reto.id }}">
+            <button type="submit">🔁 Activar solo este</button>
+          </form>
+        {% endif %}
+      </td>
+    </tr>
   {% endfor %}
 </table>
 

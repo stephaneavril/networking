@@ -93,29 +93,32 @@
 
   <div class="grid">
     {% for reto in retos %}
-      {% set reto_url = (
-        '/adivina' if reto.nombre == 'Adivina Quién'
-        else '/reto_grupal' if reto.nombre == 'Reto en Equipos'
-        else '/reto_foto' if reto.nombre == 'Reto Foto'
-        else '/ver_fotos_reto_foto' if reto.nombre|lower == 'ver fotos y votar'
-        else '/ranking_fotos' if reto.nombre == 'Ranking Fotos'
-        else '/conexion_alfa' if reto.nombre == 'Conexión Alfa'
-        else '#'
-      ) %}
-      <div class="card {{ '' if reto.activo else 'desactivado' }}"
-           onclick="{% if reto.activo %}location.href='{{ reto_url }}'{% else %}alert('Este reto está desactivado'){% endif %}">
-        <div class="badge">
-          {% if reto.nombre == 'Ver fotos y votar' %}
-            🗳
-          {% elif reto.nombre == 'Ranking Fotos' %}
-            🏆
-          {% else %}
-            +{{ reto.puntos }}
-          {% endif %}
-        </div>
-        <h3>{{ reto.nombre }}</h3>
-      </div>
-    {% endfor %}
+  {% set reto_url = (
+    '/reto_mi6_v1' if reto.nombre == 'MI6 v1'
+    else '/reto_mi6_v2' if reto.nombre == 'MI6 v2'
+    else '/reto_mi6_v3' if reto.nombre == 'MI6 v3'
+    else '/adivina' if reto.nombre == 'Adivina Quién'
+    else '/reto_grupal' if reto.nombre == 'Reto en Equipos'
+    else '/reto_foto' if reto.nombre == 'Reto Foto'
+    else '/ver_fotos_reto_foto' if reto.nombre|lower == 'ver fotos y votar'
+    else '/ranking_fotos' if reto.nombre == 'Ranking Fotos'
+    else '/conexion_alfa' if reto.nombre == 'Conexión Alfa'
+    else '#'
+  ) %}
+  <div class="card {{ '' if reto.activo else 'desactivado' }}"
+       onclick="{% if reto.activo %}location.href='{{ reto_url }}'{% else %}alert('Este reto está desactivado'){% endif %}">
+    <div class="badge">
+      {% if reto.nombre == 'MI6 v1' %} 📸
+      {% elif reto.nombre == 'MI6 v2' %} 🤝
+      {% elif reto.nombre == 'MI6 v3' %} 🗣️
+      {% elif reto.nombre == 'Ver fotos y votar' %} 🗳
+      {% elif reto.nombre == 'Ranking Fotos' %} 🏆
+      {% else %} +{{ reto.puntos }}
+      {% endif %}
+    </div>
+    <h3>{{ reto.nombre }}</h3>
+  </div>
+{% endfor %}
 
     <div class="card" onclick="location.href='{{ url_for('ranking_adivina') }}'">
       <div class="badge">👑</div>
