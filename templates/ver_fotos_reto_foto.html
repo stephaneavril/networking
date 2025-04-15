@@ -61,13 +61,12 @@
 </head>
 <body>
   <h1>📸 Vota en {{ reto_nombre }}</h1>
+<img src="{{ url_for('static', filename='images/mi6.jpg') }}" alt="Banner MI6" style="width: 100%; max-width: 700px; display: block; margin: 20px auto;">
+
   <div style="text-align: center; margin-top: 20px;">
     <p>Tienes 3 puntos en total. Puedes darlos todos a una sola foto o repartirlos.</p>
     <a href="{{ url_for('ranking_fotos') }}?reto={{ reto_nombre }}" style="color: #ec1c24; text-decoration: underline;">🔝 Ver Ranking de este reto</a>
   </div>
-    
-    Tienes 3 puntos en total. Puedes darlos todos a una sola foto o repartirlos.
-  </p>
 
   {% if ya_voto %}
     <p style="text-align: center; color: lightgreen; font-size: 1.1em;">
