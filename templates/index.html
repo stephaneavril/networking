@@ -74,7 +74,11 @@
 </head>
 <body>
 
-<header>Networking Bingo</header>
+  <header>
+    <img src="{{ url_for('static', filename='images/alfasigma.png') }}" alt="Alfasigma" style="max-height: 60px; vertical-align: middle;">
+    <span style="margin-left: 10px;">Networking ALFASIGMA</span>
+  </header>
+  
 
 <div class="container">
   {% with mensajes = get_flashed_messages() %}
