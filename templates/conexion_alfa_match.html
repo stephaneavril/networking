@@ -45,6 +45,12 @@
       <div class="perfil">{{ match['perfil_1'] }}</div>
       <div class="perfil">{{ match['perfil_2'] }}</div>
 
+      {% if match['razon_match'] %}
+        <p style="margin-top: 10px; color: lightblue;">
+          🧠 <strong>Razón del match:</strong> {{ match['razon_match'] }}
+        </p>
+      {% endif %}
+
       <div class="info">
         🎯 El video debe mostrar cómo este match puede aportar al liderazgo dentro de la compañía, destacando algún valor de Alfasigma.
       </div>

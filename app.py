@@ -902,72 +902,57 @@ def reset_conexion_alfa():
 @app.route('/generar_matches_conexion_alfa', methods=['POST'])
 def generar_matches_conexion_alfa():
     conn = get_db_connection()
-    datos = conn.execute("SELECT * FROM conexion_alfa_respuestas").fetchall()
+    try:
+        datos = conn.execute("SELECT * FROM conexion_alfa_respuestas").fetchall()
 
-    if len(datos) < 2:
-        conn.close()
-        flash("❌ No hay suficientes participantes para generar matches.")
-        return redirect('/admin_panel')
+        if len(datos) < 2:
+            flash("❌ No hay suficientes participantes para generar matches.")
+            return redirect('/admin_panel')
 
-    textos = []
-    correos = []
-    nombres = []
-    perfiles = []
+        # Verificar si el número de participantes es impar
+        if len(datos) % 2 != 0:
+            flash("⚠️ Número impar de participantes, alguien se quedará sin match.")
+        
+        # Enviar datos al endpoint externo
+        import requests
+        respuesta = requests.post(
+            'https://networking-sxxt.onrender.com/conexion_alfa_match',
+            json={"participantes": [dict(row) for row in datos]}
+        )
 
-    for row in datos:
-        respuestas = [row.get(f"r{i}", "") or "" for i in range(1, 13)]
-        texto = " ".join(respuestas)
-        textos.append(texto)
-        correos.append(row["correo"])
-        nombres.append(row["nombre"])
-        perfiles.append(row["perfil_ia"])
+        if respuesta.status_code != 200:
+            flash("❌ Error al generar matches usando IA externa.")
+            return redirect('/admin_panel')
 
-    vectores = vectorizer_ia.transform(textos)
-    sim_matrix = cosine_similarity(vectores)
+        matches = respuesta.json().get("matches", [])
+        nuevos = 0
+        ya_guardados = set(tuple(sorted((r["correo_1"], r["correo_2"])))
+                           for r in conn.execute("SELECT correo_1, correo_2 FROM conexion_alfa_matches").fetchall())
 
-    # Cargar matches ya existentes
-    ya_guardados = conn.execute("SELECT correo_1, correo_2 FROM conexion_alfa_matches").fetchall()
-    ya_guardados_set = set((min(r["correo_1"], r["correo_2"]), max(r["correo_1"], r["correo_2"])) for r in ya_guardados)
-
-    ya_pareados = set()
-    nuevos_matches = 0
-
-    for i in range(len(correos)):
-        if correos[i] in ya_pareados:
-            continue
-
-        mejor_j = None
-        mejor_sim = -1
-
-        for j in range(len(correos)):
-            if i == j or correos[j] in ya_pareados:
-                continue
-
-            sim = sim_matrix[i][j]
-            if sim > mejor_sim:
-                mejor_sim = sim
-                mejor_j = j
-
-        if mejor_j is not None:
-            correo1, correo2 = correos[i], correos[mejor_j]
-            nombre1, nombre2 = nombres[i], nombres[mejor_j]
-            perfil1, perfil2 = perfiles[i], perfiles[mejor_j]
-
-            pareja = (min(correo1, correo2), max(correo1, correo2))
-            if pareja not in ya_guardados_set:
+        for match in matches:
+            c1, c2 = match["correo_1"], match["correo_2"]
+            pareja = tuple(sorted((c1, c2)))
+            if pareja not in ya_guardados:
                 conn.execute('''
-                    INSERT INTO conexion_alfa_matches (correo_1, correo_2, nombre_1, nombre_2, perfil_1, perfil_2)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                ''', (correo1, correo2, nombre1, nombre2, perfil1, perfil2))
-                ya_guardados_set.add(pareja)
-                ya_pareados.add(correo1)
-                ya_pareados.add(correo2)
-                nuevos_matches += 1
+                    INSERT INTO conexion_alfa_matches (correo_1, correo_2, nombre_1, nombre_2, perfil_1, perfil_2, razon_match)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    c1, c2,
+                    match["nombre_1"], match["nombre_2"],
+                    match["perfil_1"], match["perfil_2"],
+                    match["razon"]
+                ))
+                nuevos += 1
+                ya_guardados.add(pareja)
 
-    conn.commit()
-    conn.close()
+        conn.commit()
+        flash(f"✅ {nuevos} matches generados con éxito.")
+    except Exception as e:
+        print("❌ ERROR en generar_matches_conexion_alfa:", str(e))
+        flash("❌ Error interno al generar los matches.")
+    finally:
+        conn.close()
 
-    flash(f"✅ {nuevos_matches} matches generados exitosamente.")
     return redirect('/admin_panel')
 
 @app.route('/forzar_matches_conexion_alfa', methods=['POST'])
