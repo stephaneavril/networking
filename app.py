@@ -670,39 +670,12 @@ def reset_reto_foto():
 
 # -------------------- CONEXION ALFA --------------------
 
-@app.route('/conexion_alfa', methods=['GET', 'POST'])
+@app.route('/conexion_alfa')
 def conexion_alfa():
     if 'correo' not in session:
         return redirect('/login')
-
-    correo = session['correo']
-    nombre = session['jugador']
-    conn = get_db_connection()
-
-    ya_existe = conn.execute("SELECT * FROM conexion_alfa_respuestas WHERE correo = ?", (correo,)).fetchone()
     
-    # 🔁 Si ya tiene respuestas, ir directo al match
-    if ya_existe:
-        conn.close()
-        return redirect('/conexion_alfa_match')
-
-    if request.method == 'POST' and not ya_existe:
-        respuestas = [request.form.get(f'r{i}') for i in range(1, 8)]
-
-        # Aquí simularemos un perfil de IA como placeholder
-        perfil_ia = generar_perfil_ia(nombre, respuestas)
-
-        conn.execute('''
-            INSERT INTO conexion_alfa_respuestas (nombre, correo, r1, r2, r3, r4, r5, r6, r7, perfil_ia)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (nombre, correo, *respuestas, perfil_ia))
-        conn.commit()
-        conn.close()
-        flash("✅ ¡Gracias! Tu perfil ha sido generado.")
-        return redirect('/conexion_alfa_mi_perfil')
-
-    conn.close()
-    return render_template('conexion_alfa_form.html', ya_existe=ya_existe)
+    return redirect('/conexion_alfa_match')
 
 @app.route('/conexion_alfa_mi_perfil')
 def conexion_alfa_mi_perfil():
