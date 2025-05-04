@@ -365,15 +365,18 @@ def reto_foto():
         },
         "reto_mi6_v1": {
             "nombre_reto": "MI6 v1",
+            "titulo_visible": "Integridad FARMAPIEL",
             "mensaje": "📸 Toma una foto que represente cómo haces lo correcto incluso cuando nadie está mirando. Una imagen de integridad, valentía o esfuerzo extra."
         },
         "reto_mi6_v2": {
             "nombre_reto": "MI6 v2",
-            "mensaje": "🤝 Captura un momento donde el trabajo en equipo brilla. Tu foto debe mostrar colaboración, apoyo mutuo o espíritu de equipo."
+            "titulo_visible": "Transparencia FARMAPIEL",
+            "mensaje": "Sube una foto que muestre apertura, honestidad o confianza. La transparencia se refleja cuando actuamos con claridad y coherencia ante los demás."
         },
         "reto_mi6_v3": {
             "nombre_reto": "MI6 v3",
-            "mensaje": "🗣️ Muéstranos cómo la comunicación clara hace la diferencia. Una imagen que represente claridad, conexión o entendimiento efectivo."
+            "titulo_visible": "Calidad FARMAPIEL",
+            "mensaje": " Comparte una foto que represente excelencia, atención al detalle o mejora continua. La calidad se demuestra en cada acción bien hecha."
         }
     }
 
@@ -417,7 +420,12 @@ def reto_foto():
         return redirect('/')
 
     conn.close()
-    return render_template("reto_foto.html", ya_existe=ya_existe, mensaje=datos_reto["mensaje"])
+    return render_template(
+    "reto_foto.html",
+    ya_existe=ya_existe,
+    mensaje=datos_reto["mensaje"],
+    reto_nombre=datos_reto["titulo_visible"] or datos_reto["nombre_reto"]
+)
 
 @app.route('/ver_fotos_reto_foto', methods=['GET', 'POST'])
 def ver_fotos_reto_foto():

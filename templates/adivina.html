@@ -73,12 +73,27 @@
       color: lightgreen;
       font-weight: bold;
     }
+
+    #timer {
+      font-size: 1.2em;
+      margin-top: 10px;
+      color: #ffca28;
+    }
+
+    #advertencia {
+      display: none;
+      font-weight: bold;
+      color: #ffeb3b;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
   <h1>🎬 Adivina Quién - El Casting</h1>
 
   <div class="tarjeta">
+    <div id="timer">⏳ Tiempo restante: 20:00</div>
+    <div id="advertencia">⚠️ ¡Quedan solo 2 minutos! Adivina rápido...</div>
     <div id="contenido"></div>
 
     <select id="respuesta">
@@ -100,19 +115,23 @@
     let actual;
     let aciertos = 0;
     let puntaje = 0;
+    let tiempoRestante = 1200; // 20 minutos
+
+    const frases_keys = [
+      ["superpoder", "🎯 Superpoder"],
+      ["pasion", "🎶 Pasión"],
+      ["dato_curioso", "🧠 Dato curioso"],
+      ["pelicula_favorita", "🎬 Película favorita"],
+      ["actor_favorito", "🎭 Actor favorito"],
+      ["mejor_concierto", "🎤 Concierto"],
+      ["mejor_libro", "📖 Libro favorito"],
+      ["prenda_imprescindible", "👕 Prenda imprescindible"],
+      ["no_soporto", "🤢 No soporta"]
+    ];
 
     function mostrarFrase() {
       if (indices_restantes.length === 0) {
-        fetch('/adivina_finalizado', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ aciertos, puntaje })
-        })
-        .then(res => res.json())
-        .then(data => {
-          alert(data.message || data.error);
-          window.location.href = "/ranking_adivina";
-        });
+        finalizarJuego();
         return;
       }
 
@@ -121,17 +140,11 @@
       actual = participantes[i];
       indices_restantes.splice(idx, 1);
 
-      const pistas = `
-        <p><strong>Superpoder:</strong> ${actual.superpoder}</p>
-        <p><strong>Pasión:</strong> ${actual.pasion}</p>
-        <p><strong>Dato curioso:</strong> ${actual.dato_curioso}</p>
-        <p><strong>Película favorita:</strong> ${actual.pelicula_favorita}</p>
-        <p><strong>Actor favorito:</strong> ${actual.actor_favorito}</p>
-        <p><strong>Mejor concierto:</strong> ${actual.mejor_concierto}</p>
-        <p><strong>Prenda imprescindible:</strong> ${actual.prenda_imprescindible}</p>
-        <p><strong>Mejor libro:</strong> ${actual.mejor_libro}</p>
-        <p><strong>No soporta:</strong> ${actual.no_soporto}</p>
-      `;
+      const seleccionadas = frases_keys.sort(() => 0.5 - Math.random()).slice(0, 3);
+      let pistas = "";
+      for (const [clave, etiqueta] of seleccionadas) {
+        pistas += `<p><strong>${etiqueta}:</strong> ${actual[clave]}</p>`;
+      }
 
       document.getElementById("contenido").innerHTML = pistas;
       document.getElementById("respuesta").value = "";
@@ -155,7 +168,43 @@
       document.getElementById("puntaje").innerText = `Puntaje: ${puntaje}`;
     }
 
+    function finalizarJuego() {
+      fetch('/adivina_finalizado', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ aciertos, puntaje })
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.message || data.error);
+        window.location.href = "/ranking_adivina";
+      });
+    }
+
+    function iniciarTemporizador() {
+      const timer = document.getElementById("timer");
+      const advertencia = document.getElementById("advertencia");
+
+      const intervalo = setInterval(() => {
+        tiempoRestante--;
+        const min = Math.floor(tiempoRestante / 60);
+        const seg = tiempoRestante % 60;
+        timer.innerText = `⏳ Tiempo restante: ${min.toString().padStart(2, '0')}:${seg.toString().padStart(2, '0')}`;
+
+        if (tiempoRestante === 120) {
+          advertencia.style.display = "block";
+        }
+
+        if (tiempoRestante <= 0) {
+          clearInterval(intervalo);
+          alert("⏰ ¡Se acabó el tiempo!");
+          finalizarJuego();
+        }
+      }, 1000);
+    }
+
     mostrarFrase();
+    iniciarTemporizador();
   </script>
 </body>
 </html>
