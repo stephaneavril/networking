@@ -26,12 +26,12 @@ def get_db_connection():
 
 def generar_perfil_ia(nombre, respuestas):
     frases = [
-        f"{nombre} es una persona que destaca por su habilidad de '{respuestas[0]}'.",
-        f"Le apasiona '{respuestas[1]}' y tiene un dato curioso: '{respuestas[2]}'.",
-        f"Su película favorita es '{respuestas[3]}' y admira a '{respuestas[4]}'.",
-        f"No puede soportar '{respuestas[5]}'.",
-        f"Uno de sus libros favoritos es '{respuestas[6]}' y considera imprescindible '{respuestas[7]}'.",
-        f"El mejor concierto que ha vivido fue '{respuestas[8]}'.",
+        f"🧠 {nombre} tiene un dato curioso: '{respuestas[0]}'.",
+        f"🎬 Su película favorita es '{respuestas[1]}'.",
+        f"🤢 No soporta: '{respuestas[2]}'.",
+        f"👕 No podría vivir sin: '{respuestas[3]}'.",
+        f"🎤 El mejor concierto que ha vivido fue: '{respuestas[4]}'.",
+        f"🎶 Y fuera del trabajo le apasiona: '{respuestas[5]}'.",
     ]
     return " ".join(frases)
 
@@ -71,7 +71,7 @@ def preguntas_post_login():
     ya_respondio = conn.execute("SELECT * FROM conexion_alfa_respuestas WHERE correo = ?", (correo,)).fetchone()
 
     if request.method == 'POST' and not ya_respondio:
-        respuestas = [request.form.get(f'r{i}') for i in range(1, 13)]  # r1 a r12
+        respuestas = [request.form.get(f'r{i}') or "" for i in range(1, 13)]
         perfil_ia = generar_perfil_ia(nombre, respuestas)
 
         conn.execute('''
