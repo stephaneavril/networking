@@ -112,68 +112,69 @@
   <script>
     let participantes = {{ participantes|tojson }};
     participantes = participantes.sort(() => 0.5 - Math.random()).slice(0, 12);
-  
+
     let indices_restantes = participantes.map((_, i) => i);
     let actual;
     let aciertos = 0;
     let puntaje = 0;
     let tiempoRestante = 1200; // 20 minutos
-  
+    let temporizadorIntervalo;
+
     const frases_keys = [
-      ["pasion", "🎶 Pasión"],
       ["dato_curioso", "🧠 Dato curioso"],
       ["pelicula_favorita", "🎬 Película favorita"],
       ["no_soporto", "🤢 No soporta"],
-      ["mejor_libro", "📖 Libro favorito"],
       ["prenda_imprescindible", "👕 Prenda imprescindible"],
-      ["mejor_concierto", "🎤 Concierto"]
+      ["mejor_concierto", "🎤 Concierto"],
+      ["pasion", "🎶 Pasión"]
     ];
-  
+
     function mostrarFrase() {
       if (indices_restantes.length === 0) {
         finalizarJuego();
         return;
       }
-  
+
       const idx = Math.floor(Math.random() * indices_restantes.length);
       const i = indices_restantes[idx];
       actual = participantes[i];
       indices_restantes.splice(idx, 1);
-  
+
       const seleccionadas = frases_keys.sort(() => 0.5 - Math.random()).slice(0, 3);
       let pistas = "";
       for (const [clave, etiqueta] of seleccionadas) {
         pistas += `<p><strong>${etiqueta}:</strong> ${actual[clave]}</p>`;
       }
-  
+
       document.getElementById("contenido").innerHTML = pistas;
       document.getElementById("respuesta").value = "";
       document.getElementById("resultado").innerText = "";
     }
-  
+
     function verificar() {
       const seleccion = document.getElementById("respuesta").value.trim().toLowerCase();
       const correcto = actual.nombre_completo.trim().toLowerCase();
-  
+
       if (seleccion === correcto) {
         document.getElementById("resultado").innerText = "✅ ¡Correcto!";
         aciertos++;
         puntaje += 10;
-  
+
         // Eliminar nombre del selector
         const optionToRemove = document.querySelector(`#respuesta option[value="${actual.nombre_completo}"]`);
         if (optionToRemove) optionToRemove.remove();
-  
+
+        document.getElementById("puntaje").innerText = `Puntaje: ${puntaje}`;
         setTimeout(mostrarFrase, 1000);
       } else {
         document.getElementById("resultado").innerText = "❌ Incorrecto, intenta con otro nombre.";
         puntaje -= 10;
+        document.getElementById("puntaje").innerText = `Puntaje: ${puntaje}`;
       }
-  
-      document.getElementById("puntaje").innerText = `Puntaje: ${puntaje}`;
     }
-  
+
     function finalizarJuego() {
+      clearInterval(temporizadorIntervalo);
       fetch('/adivina_finalizado', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -185,32 +186,33 @@
         window.location.href = "/ranking_adivina";
       });
     }
-  
+
     function iniciarTemporizador() {
       const timer = document.getElementById("timer");
       const advertencia = document.getElementById("advertencia");
-  
-      const intervalo = setInterval(() => {
+
+      temporizadorIntervalo = setInterval(() => {
         tiempoRestante--;
         const min = Math.floor(tiempoRestante / 60);
         const seg = tiempoRestante % 60;
         timer.innerText = `⏳ Tiempo restante: ${min.toString().padStart(2, '0')}:${seg.toString().padStart(2, '0')}`;
-  
+
         if (tiempoRestante === 120) {
           advertencia.style.display = "block";
         }
-  
+
         if (tiempoRestante <= 0) {
-          clearInterval(intervalo);
+          clearInterval(temporizadorIntervalo);
           alert("⏰ ¡Se acabó el tiempo!");
           finalizarJuego();
         }
       }, 1000);
     }
-  
+
+    // Iniciar todo
     mostrarFrase();
     iniciarTemporizador();
   </script>
-  
+
 </body>
 </html>
