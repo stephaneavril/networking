@@ -4,11 +4,16 @@
   <meta charset="UTF-8">
   <title>Ingresar a Networking Bingo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <style>
     body {
       background-color: #0c0e2c;
-      color: white;
-      font-family: 'Segoe UI', sans-serif;
+      background-image: url('/static/images/lastofus_bg.jpg');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      color: #e0e0e0;
+      font-family: 'Share Tech Mono', monospace;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -17,13 +22,24 @@
     }
 
     .login-box {
-      background-color: #1f2140;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      background-color: rgba(28, 28, 28, 0.9);
+      padding: 40px 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 25px rgba(178, 34, 34, 0.6);
       text-align: center;
       max-width: 400px;
       width: 100%;
+      border: 1px solid #b22222;
+    }
+
+    .login-box h2 {
+      color: #b22222;
+      margin-bottom: 10px;
+    }
+
+    .login-box p {
+      font-size: 0.95em;
+      margin-bottom: 25px;
     }
 
     input {
@@ -34,24 +50,33 @@
       font-size: 16px;
       border: none;
       border-radius: 6px;
+      background-color: #2a2a2a;
+      color: white;
+      box-shadow: inset 0 0 5px #000;
     }
 
     button {
-      background-color: #ec1c24;
+      background-color: #b22222;
       color: white;
       border: none;
       padding: 12px 24px;
       font-size: 16px;
       border-radius: 6px;
       cursor: pointer;
-      margin-top: 10px;
+      margin-top: 15px;
+      box-shadow: 0 0 10px rgba(178, 34, 34, 0.3);
+      transition: background-color 0.2s ease-in-out;
+    }
+
+    button:hover {
+      background-color: #d63031;
     }
   </style>
 </head>
 <body>
   <div class="login-box">
-    <h2>🎉 Bienvenido al Networking Bingo</h2>
-    <p>Ingresa tus datos para comenzar</p>
+    <h2>🎮 Bienvenido a Networking Bingo</h2>
+    <p>Ingresa tus datos para sobrevivir</p>
     <form method="POST">
       <input type="text" name="nombre" placeholder="Nombre completo" required>
       <input type="email" name="correo" placeholder="Correo electrónico" required>
