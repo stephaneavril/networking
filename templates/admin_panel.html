@@ -118,6 +118,16 @@
   <button type="submit" style="background: darkred;">🧨 Eliminar TODOS los jugadores</button>
 </form>
 
+<!-- Fotos por equipo -->
+<h2>📷 Ver fotos por equipo</h2>
+<a href="/ver_fotos_equipo" target="_blank" style="color:lightblue;">Ver todas las fotos subidas por equipos</a>
+
+<form action="/reset_reto_equipo_foto" method="POST" style="display:inline-block; margin-top: 10px;">
+  <button onclick="return confirm('¿Seguro que deseas borrar todas las fotos del reto de equipo?')" class="btn btn-danger">
+    🗑️ Borrar todas las fotos de equipo
+  </button>
+</form>
+
 <!-- Generar contenido Adivina -->
 <h2>🧠 Generar Contenido Juego Adivina Quién</h2>
 <form method="POST" action="/generar_contenido_adivina" onsubmit="return confirm('¿Regenerar contenido de Adivina Quién?');">

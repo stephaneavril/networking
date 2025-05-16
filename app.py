@@ -56,13 +56,13 @@ def login():
             cursor.execute("INSERT INTO jugadores (nombre, correo) VALUES (?, ?)", (nombre, correo))
             conn.commit()
         conn.close()
-        return redirect('/preguntas_post_login')
+        return redirect('/')
     return render_template('login.html')
 
 @app.route('/preguntas_post_login', methods=['GET', 'POST'])
 def preguntas_post_login():
     if 'correo' not in session:
-        return redirect('/login')
+        return redirect('/')
 
     correo = session['correo']
     nombre = session['jugador']
@@ -103,13 +103,15 @@ def preguntas_post_login():
 @app.route('/')
 def index():
     if 'jugador' not in session:
-        return redirect('/login')
+        return redirect('/login')  # 🔁 CORREGIDO: antes decía redirect('/'), causaba bucle
 
     conn = get_db_connection()
     retos = conn.execute("SELECT * FROM retos WHERE activo = 1").fetchall()
     conn.close()
 
-    # Conexión a la base de datos del sistema QR
+    modo_foto_equipo = True  # Cambia a False si quieres mostrar todos los retos
+
+    # QR scan ranking
     qr_conn = sqlite3.connect('scan_points.db')
     qr_conn.row_factory = sqlite3.Row
     ranking_qr = qr_conn.execute('''
@@ -120,7 +122,7 @@ def index():
     ''').fetchall()
     qr_conn.close()
 
-    return render_template('index.html', retos=retos, ranking_qr=ranking_qr)
+    return render_template('index.html', retos=retos, ranking_qr=ranking_qr, modo_foto_equipo=modo_foto_equipo)
 
 @app.route('/reset_ranking_qr', methods=['POST'])
 def reset_ranking_qr():
@@ -135,7 +137,7 @@ def reset_ranking_qr():
 @app.route('/adivina')
 def adivina():
     if 'jugador' not in session:
-        return redirect('/login')
+        return redirect('/')
     conn = get_db_connection()
     rows = conn.execute("SELECT * FROM adivina_participantes").fetchall()
     conn.close()
@@ -175,7 +177,7 @@ def adivina_finalizado():
 @app.route('/ranking_adivina')
 def ranking_adivina():
     if 'jugador' not in session:
-        return redirect('/login')
+        return redirect('/')
     conn = get_db_connection()
     resultados = conn.execute('''
         SELECT nombre_jugador, puntos_extra, timestamp
@@ -265,7 +267,7 @@ def respuestas_curiosas():
 @app.route('/subir_evidencia', methods=['POST'])
 def subir_evidencia():
     if 'jugador' not in session:
-        return redirect('/login')
+        return redirect('/')
     nombre = session['jugador']
     reto_id = request.form.get('reto_id')
     archivo = request.files.get('archivo')
@@ -286,7 +288,7 @@ def subir_evidencia():
 @app.route('/reto_grupal')
 def reto_grupal():
     if 'jugador' not in session:
-        return redirect('/login')
+        return redirect('/')
     conn = get_db_connection()
     reto = conn.execute("SELECT nombre FROM retos_grupales ORDER BY RANDOM() LIMIT 1").fetchone()
     conn.close()
@@ -353,7 +355,7 @@ def get_reto_id(nombre_reto):
 @app.route('/reto_mi6_v3', methods=['GET', 'POST'])
 def reto_foto():
     if 'jugador' not in session:
-        return redirect('/login')
+        return redirect('/')
 
     ruta = request.path.strip("/")
 
@@ -430,7 +432,7 @@ def reto_foto():
 @app.route('/ver_fotos_reto_foto', methods=['GET', 'POST'])
 def ver_fotos_reto_foto():
     if 'correo' not in session:
-        return redirect('/login')
+        return redirect('/')
 
     correo = session['correo']
     conn = get_db_connection()
@@ -500,7 +502,7 @@ def ver_fotos_reto_foto():
 @app.route('/ver_fotos_mi6_v3', methods=['GET', 'POST'])
 def ver_fotos_mi6():
     if 'correo' not in session:
-        return redirect('/login')
+        return redirect('/')
 
     ruta = request.path.strip("/")
     nombre_reto = {
@@ -567,7 +569,7 @@ def ver_fotos_mi6():
 @app.route('/votar_fotos', methods=['POST'])
 def votar_fotos():
     if 'correo' not in session:
-        return redirect('/login')
+        return redirect('/')
     correo_votante = session['correo']
     votos = request.form
     total_puntos = sum([int(v) for v in votos.values() if v.isdigit()])
@@ -587,7 +589,7 @@ def votar_fotos():
 @app.route('/ranking_fotos')
 def ranking_fotos():
     if 'jugador' not in session:
-        return redirect('/login')
+        return redirect('/')
 
     conn = get_db_connection()
 
@@ -672,14 +674,14 @@ def reset_reto_foto():
 @app.route('/conexion_alfa')
 def conexion_alfa():
     if 'correo' not in session:
-        return redirect('/login')
+        return redirect('/')
     
     return redirect('/conexion_alfa_match')
 
 @app.route('/conexion_alfa_mi_perfil')
 def conexion_alfa_mi_perfil():
     if 'correo' not in session:
-        return redirect('/login')
+        return redirect('/')
 
     conn = get_db_connection()
     perfil = conn.execute("SELECT * FROM conexion_alfa_respuestas WHERE correo = ?", (session['correo'],)).fetchone()
@@ -689,7 +691,7 @@ def conexion_alfa_mi_perfil():
 @app.route('/conexion_alfa_matches', methods=['GET'])
 def conexion_alfa_matches():
     if 'correo' not in session:
-        return redirect('/login')
+        return redirect('/')
 
     correo_usuario = session['correo']
     conn = get_db_connection()
@@ -764,7 +766,7 @@ def confirmar_match():
 @app.route('/subir_video_match', methods=['GET', 'POST'])
 def subir_video_match():
     if 'correo' not in session:
-        return redirect('/login')
+        return redirect('/')
     
     correo = session['correo']
     conn = get_db_connection()
@@ -808,7 +810,7 @@ def subir_video_match():
 @app.route('/conexion_alfa_match')
 def conexion_alfa_match():
     if 'correo' not in session:
-        return redirect('/login')
+        return redirect('/')
 
     correo = session['correo']
     conn = get_db_connection()
@@ -1004,7 +1006,7 @@ def eliminar_todos_los_jugadores():
 @app.route('/feedback_match', methods=['POST'])
 def feedback_match():
     if 'correo' not in session:
-        return redirect('/login')
+        return redirect('/')
 
     feedback = int(request.form.get('feedback'))
     match_id = int(request.form.get('match_id'))
@@ -1016,6 +1018,121 @@ def feedback_match():
     
     flash("✅ Gracias por tu feedback sobre la conexión.")
     return redirect("/conexion_alfa_match")
+
+# -------------------- SUBE TU FOTO --------------------
+@app.route('/sube_tu_foto', methods=['GET', 'POST'])
+def sube_tu_foto():
+    if 'jugador' not in session:
+        return redirect('/')
+
+    correo = session['correo']
+    nombre = session['jugador']
+    conn = get_db_connection()
+
+    ya_existe = conn.execute("SELECT * FROM reto_equipo_foto WHERE correo = ?", (correo,)).fetchone()
+
+    if request.method == 'POST':
+        equipo = request.form.get('equipo')
+        archivo = request.files.get('foto')
+
+        if not equipo or not archivo:
+            flash("❌ Faltan datos.")
+            return redirect('/sube_tu_foto')
+
+        nombre_archivo = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{archivo.filename}"
+        carpeta = os.path.join('static/fotos_equipo')
+        os.makedirs(carpeta, exist_ok=True)
+        archivo.save(os.path.join(carpeta, nombre_archivo))
+
+        conn.execute(
+            "INSERT INTO reto_equipo_foto (nombre_participante, correo, equipo, archivo) VALUES (?, ?, ?, ?)",
+            (nombre, correo, equipo, nombre_archivo)
+        )
+        conn.commit()
+        conn.close()
+
+        flash("✅ Foto subida con éxito.")
+        return redirect('/')
+    
+    conn.close()
+    return render_template("reto_equipo_foto.html", ya_existe=ya_existe)
+
+@app.route('/reto_equipo_foto', methods=['GET', 'POST'])
+def reto_equipo_foto():
+    if 'jugador' not in session:
+        return redirect('/login')
+
+    nombre = session.get('jugador')
+    correo = session.get('correo')
+
+    conn = get_db_connection()
+    ya_existe = conn.execute("SELECT * FROM reto_equipo_foto WHERE correo = ?", (correo,)).fetchone()
+
+    if request.method == 'POST':
+        equipo = request.form.get('equipo')
+        archivo = request.files.get('foto')
+
+        if not equipo or not archivo:
+            flash("❌ Faltan datos.")
+            return redirect('/reto_equipo_foto')
+
+        nombre_archivo = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{archivo.filename}"
+        carpeta = os.path.join('static/fotos_equipo')
+        os.makedirs(carpeta, exist_ok=True)
+        ruta = os.path.join(carpeta, nombre_archivo)
+        archivo.save(ruta)
+
+        conn.execute(
+            '''
+            INSERT INTO reto_equipo_foto (nombre_participante, correo, equipo, archivo)
+            VALUES (?, ?, ?, ?)
+            ''',
+            (nombre, correo, equipo, nombre_archivo)
+        )
+        conn.commit()
+        conn.close()
+
+        flash("✅ Foto subida exitosamente.")
+        return redirect('/')
+
+    conn.close()
+    return render_template('reto_equipo_foto.html', ya_existe=ya_existe)
+
+@app.route('/ver_fotos_equipo')
+def ver_fotos_equipo():
+    conn = get_db_connection()
+    fotos = conn.execute("SELECT * FROM reto_equipo_foto").fetchall()
+    conn.close()
+
+    # Agrupar por equipo
+    equipos = {}
+    for f in fotos:
+        equipo = f["equipo"]
+        if equipo not in equipos:
+            equipos[equipo] = []
+        equipos[equipo].append(f)
+
+    return render_template("ver_fotos_equipo.html", equipos=equipos)
+
+@app.route('/reset_reto_equipo_foto', methods=['POST'])
+def reset_reto_equipo_foto():
+    conn = get_db_connection()
+    conn.execute("DELETE FROM reto_equipo_foto")
+    conn.commit()
+    conn.close()
+
+    # Eliminar archivos físicamente del folder
+    carpeta = 'static/fotos_equipo'
+    if os.path.exists(carpeta):
+        for archivo in os.listdir(carpeta):
+            ruta = os.path.join(carpeta, archivo)
+            if os.path.isfile(ruta):
+                os.remove(ruta)
+
+    flash("✅ Todas las fotos del reto 'Sube tu foto' han sido eliminadas.")
+    return redirect('/admin_panel')
+
+    return render_template('index.html', retos=retos, modo_foto_equipo=modo_foto_equipo)
 
 # -------------------- RUN --------------------
 if __name__ == '__main__':

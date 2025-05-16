@@ -74,21 +74,20 @@
 </head>
 <body>
 
-  <header>
-    <img src="{{ url_for('static', filename='images/alfasigma.png') }}" alt="Alfasigma" style="max-height: 60px; vertical-align: middle;">
-    <span style="margin-left: 10px;">Networking BINGO</span>
-  </header>
-  
+<header>
+  <img src="{{ url_for('static', filename='images/alfasigma.png') }}" alt="Alfasigma" style="max-height: 60px; vertical-align: middle;">
+  <span style="margin-left: 10px;">Networking BINGO</span>
+</header>
 
 <div class="container">
   {% with mensajes = get_flashed_messages() %}
-  {% if mensajes %}
-    <div style="background: #1f2140; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-      {% for msg in mensajes %}
-        <p style="color: lightgreen; margin: 0;">{{ msg }}</p>
-      {% endfor %}
-    </div>
-  {% endif %}
+    {% if mensajes %}
+      <div style="background: #1f2140; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+        {% for msg in mensajes %}
+          <p style="color: lightgreen; margin: 0;">{{ msg }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
   {% endwith %}
 
   <p style="text-align: center; font-size: 1.1em;">
@@ -96,53 +95,55 @@
   </p>
 
   <div class="grid">
-    {% for reto in retos %}
-  {% set reto_url = (
-    '/reto_mi6_v1' if reto.nombre == 'MI6 v1'
-    else '/reto_mi6_v2' if reto.nombre == 'MI6 v2'
-    else '/reto_mi6_v3' if reto.nombre == 'MI6 v3'
-    else '/adivina' if reto.nombre == 'Adivina Quién'
-    else '/reto_grupal' if reto.nombre == 'Reto en Equipos'
-    else '/reto_foto' if reto.nombre == 'Reto Foto'
-    else '/ver_fotos_reto_foto' if reto.nombre|lower == 'ver fotos y votar'
-    else '/ranking_fotos' if reto.nombre == 'Ranking Fotos'
-    else '/conexion_alfa' if reto.nombre == 'Conexión Alfa'
-    else '#'
-  ) %}
-  <div class="card {{ '' if reto.activo else 'desactivado' }}"
-       onclick="{% if reto.activo %}location.href='{{ reto_url }}'{% else %}alert('Este reto está desactivado'){% endif %}">
-    <div class="badge">
-      {% if reto.nombre == 'MI6 v1' %} 📸
-      {% elif reto.nombre == 'MI6 v2' %} 🤝
-      {% elif reto.nombre == 'MI6 v3' %} 🗣️
-      {% elif reto.nombre == 'Ver fotos y votar' %} 🗳
-      {% elif reto.nombre == 'Ranking Fotos' %} 🏆
-      {% else %} +{{ reto.puntos }}
-      {% endif %}
-    </div>
-    <h3>
-      {% if reto.nombre == 'MI6 v1' %} Integridad FARMAPIEL
-      {% elif reto.nombre == 'MI6 v2' %} Transparencia FARMAPIEL
-      {% elif reto.nombre == 'MI6 v3' %} Calidad FARMAPIEL
-      {% else %} {{ reto.nombre }}
-      {% endif %}
-    </h3>
-      </div>
-{% endfor %}
-<div class="card" onclick="location.href='/ver_fotos_mi6_v1'">
-  <div class="badge">📸</div>
-  <h3>Votar Integridad Farmapiel</h3>
-</div>
-<div class="card" onclick="location.href='/ver_fotos_mi6_v2'">
-  <div class="badge">🤝</div>
-  <h3>Votar Transparencia Farmapiel</h3>
-</div>
-<div class="card" onclick="location.href='/ver_fotos_mi6_v3'">
-  <div class="badge">🗣️</div>
-  <h3>Votar Calidad Farmapiel</h3>
-</div>  
 
-    <div class="card" onclick="location.href='{{ url_for('ranking_adivina') }}'">
+    {% if not modo_foto_equipo %}
+      {% for reto in retos %}
+        {% set reto_url = (
+          '/reto_mi6_v1' if reto.nombre == 'MI6 v1'
+          else '/reto_mi6_v2' if reto.nombre == 'MI6 v2'
+          else '/reto_mi6_v3' if reto.nombre == 'MI6 v3'
+          else '/adivina' if reto.nombre == 'Adivina Quién'
+          else '/reto_grupal' if reto.nombre == 'Reto en Equipos'
+          else '/reto_foto' if reto.nombre == 'Reto Foto'
+          else '/ver_fotos_reto_foto' if reto.nombre|lower == 'ver fotos y votar'
+          else '/ranking_fotos' if reto.nombre == 'Ranking Fotos'
+          else '/conexion_alfa' if reto.nombre == 'Conexión Alfa'
+          else '#'
+        ) %}
+        <div class="card {{ '' if reto.activo else 'desactivado' }}"
+             onclick="{% if reto.activo %}location.href='{{ reto_url }}'{% else %}alert('Este reto está desactivado'){% endif %}">
+          <div class="badge">
+            {% if reto.nombre == 'MI6 v1' %} 📸
+            {% elif reto.nombre == 'MI6 v2' %} 🤝
+            {% elif reto.nombre == 'MI6 v3' %} 🗣️
+            {% elif reto.nombre == 'Ver fotos y votar' %} 🗳
+            {% elif reto.nombre == 'Ranking Fotos' %} 🏆
+            {% else %} +{{ reto.puntos }}
+            {% endif %}
+          </div>
+          <h3>
+            {% if reto.nombre == 'MI6 v1' %} Integridad FARMAPIEL
+            {% elif reto.nombre == 'MI6 v2' %} Transparencia FARMAPIEL
+            {% elif reto.nombre == 'MI6 v3' %} Calidad FARMAPIEL
+            {% else %} {{ reto.nombre }}
+            {% endif %}
+          </h3>
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <!-- SIEMPRE VISIBLES -->
+    <div class="card" onclick="location.href='/reto_equipo_foto'">
+      <div class="badge">📷</div>
+      <h3>Reto Foto de Equipo</h3>
+    </div>
+
+    <div class="card" onclick="location.href='/ver_fotos_equipo'">
+      <div class="badge">🖼️</div>
+      <h3>Ver Fotos de Equipos</h3>
+    </div>
+
+    <div class="card" onclick="location.href='/ranking_adivina'">
       <div class="badge">👑</div>
       <h3>Ranking Adivina Quién</h3>
     </div>
@@ -155,7 +156,6 @@
       <p style="margin-top:10px;">Haz clic para ver el ranking en tiempo real</p>
     </div>
   </a>
-
 </div>
 
 <footer>
